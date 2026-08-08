@@ -57,7 +57,8 @@ class AutonomousOrchestrator:
                 return observations, flag
         return observations, None
 
-    def run(self, goal: str, investigation_id=None) -> tuple[list[Observation], str | None]:
+    def run(self, goal: str, investigation_id=None) -> list[Observation]:
+        """Backward-compatible synchronous API returning observations only."""
         observations: list[Observation] = []
         for _ in range(self.max_steps):
             action = self.planner.next_action(goal, observations)
@@ -71,8 +72,8 @@ class AutonomousOrchestrator:
             flag = self._find_flag(result.summary) or self._find_flag(result.data)
             if flag:
                 self.memory.append(MemoryEvent(investigation_id, "flag", action.capability, action.input_text, "found", "Candidate flag detected.", {"flag": flag}))
-                return observations, flag
-        return observations, None
+                break
+        return observations
 
     async def _record(self, event_type: str, capability: str, input_text: str, status: str, summary: str, data: dict, investigation_id=None) -> None:
         self.memory.append(MemoryEvent(investigation_id, event_type, capability, input_text, status, summary, data))
