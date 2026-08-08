@@ -1,7 +1,8 @@
 services:
   backend:
     build:
-      context: ./backend
+      context: .
+      dockerfile: backend/Dockerfile
     environment:
       CTF_OS_ENVIRONMENT: development
       CTF_OS_DEBUG: "true"
