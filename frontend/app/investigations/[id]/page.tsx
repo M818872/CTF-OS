@@ -10,6 +10,7 @@ type Workspace = {
   capabilities: string[];
   activities: Activity[];
 };
+type ToolResult = { capability: string; status: string; summary: string; data: Record<string, unknown> };
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
 
@@ -20,6 +21,7 @@ export default function InvestigationPage({ params }: { params: Promise<{ id: st
   const [selected, setSelected] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [result, setResult] = useState<ToolResult | null>(null);
 
   async function load(caseId: string) {
     const response = await fetch(`${API}/investigations/${caseId}/workspace`);
@@ -48,12 +50,18 @@ export default function InvestigationPage({ params }: { params: Promise<{ id: st
     finally { setBusy(false); }
   }
 
-  async function queueCapability() {
+  async function executeCapability() {
     if (!id || !selected) return;
-    setBusy(true); setError("");
+    setBusy(true); setError(""); setResult(null);
     try {
-      const response = await fetch(`${API}/investigations/${id}/execute`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ capability: selected, input_text: goal }) });
-      if (!response.ok) throw new Error("Capability could not be queued");
+      const response = await fetch(`${API}/tools/execute`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ capability: selected, input_text: goal }) });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.detail || "Capability execution failed");
+      }
+      const data = (await response.json()) as ToolResult;
+      setResult(data);
+      await fetch(`${API}/investigations/${id}/execute`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ capability: selected, input_text: goal }) });
       await load(id);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Execution failed"); }
     finally { setBusy(false); }
@@ -89,15 +97,16 @@ export default function InvestigationPage({ params }: { params: Promise<{ id: st
       </section>
 
       <section className="section-block">
-        <div className="section-heading"><div><p className="eyebrow">CAPABILITIES</p><h2>Execution queue</h2></div></div>
+        <div className="section-heading"><div><p className="eyebrow">CAPABILITIES</p><h2>Controlled execution</h2></div></div>
         <div className="card">
           <select value={selected} onChange={(event) => setSelected(event.target.value)} disabled={!workspace.capabilities.length}>
             {!workspace.capabilities.length && <option value="">No capabilities routed yet</option>}
             {workspace.capabilities.map((capability) => <option key={capability} value={capability}>{capability}</option>)}
           </select>
-          <button className="ghost" onClick={() => void queueCapability()} disabled={busy || !selected} style={{ marginTop: 12 }}>Queue capability</button>
-          <p className="muted" style={{ fontSize: 12, marginBottom: 0 }}>MVP execution is policy-bounded: this action records the request without running arbitrary shell commands.</p>
+          <button className="ghost" onClick={() => void executeCapability()} disabled={busy || !selected} style={{ marginTop: 12 }}>{busy ? "Executing..." : "Run capability"}</button>
+          <p className="muted" style={{ fontSize: 12, marginBottom: 0 }}>Execution is allow-listed and policy-bounded. No arbitrary shell commands are run.</p>
         </div>
+        {result && <div className="card" style={{ marginTop: 12 }}><p className="eyebrow">RESULT</p><h3>{result.capability} · {result.status}</h3><p className="muted">{result.summary}</p><pre style={{ whiteSpace: "pre-wrap", color: "#9aa6ba" }}>{JSON.stringify(result.data, null, 2)}</pre></div>}
       </section>
 
       <section className="section-block">
