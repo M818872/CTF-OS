@@ -1,6 +1,6 @@
+import re
 from dataclasses import dataclass
 from typing import Protocol
-import re
 
 from app.persistence.runtime import RuntimeEventStore
 from app.services.execution import CapabilityExecutionService
