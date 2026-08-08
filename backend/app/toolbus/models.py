@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, Protocol
 from uuid import UUID, uuid4
 
@@ -27,7 +27,7 @@ class ToolResult:
     ok: bool
     output: Any = None
     error: str | None = None
-    started_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    started_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     duration_ms: float = 0.0
 
 
