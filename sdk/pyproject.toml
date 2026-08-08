@@ -1,0 +1,6 @@
+[project]
+name = "ctfos-sdk"
+version = "0.1.0"
+description = "Small contracts for CTF-OS plugins and specialists"
+requires-python = ">=3.12"
+dependencies = []
