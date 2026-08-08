@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Protocol
+import re
 
 from app.services.execution import CapabilityExecutionService
 
@@ -22,13 +23,11 @@ class Planner(Protocol):
     def next_action(self, goal: str, observations: list[Observation]) -> Action | None: ...
 
 
-class AutonomousOrchestrator:
-    """Runs a bounded observe -> decide -> execute loop.
+_FLAG_PATTERN = re.compile(r"\b(?:CTF|FLAG|THM|HTB|PICOCTF)\{[^\r\n{}]{1,200}\}", re.IGNORECASE)
 
-    The planner decides what registered capability to call next. The
-    orchestrator owns iteration limits and records every observation, so a
-    planner cannot accidentally create an unbounded execution loop.
-    """
+
+class AutonomousOrchestrator:
+    """Runs a bounded observe -> decide -> execute loop."""
 
     def __init__(self, executor: CapabilityExecutionService, planner: Planner, max_steps: int = 12) -> None:
         if max_steps < 1:
@@ -37,7 +36,7 @@ class AutonomousOrchestrator:
         self.planner = planner
         self.max_steps = max_steps
 
-    def run(self, goal: str) -> list[Observation]:
+    def run(self, goal: str) -> tuple[list[Observation], str | None]:
         observations: list[Observation] = []
         for _ in range(self.max_steps):
             action = self.planner.next_action(goal, observations)
@@ -51,17 +50,24 @@ class AutonomousOrchestrator:
                 data=result.data,
             )
             observations.append(observation)
-            if self._contains_flag(result.data) or self._contains_flag(result.summary):
-                break
-        return observations
+            flag = self._find_flag(result.summary) or self._find_flag(result.data)
+            if flag:
+                return observations, flag
+        return observations, None
 
-    @staticmethod
-    def _contains_flag(value: object) -> bool:
+    @classmethod
+    def _find_flag(cls, value: object) -> str | None:
         if isinstance(value, str):
-            lowered = value.lower()
-            return "flag{" in lowered or "ctf{" in lowered or "thm{" in lowered or "picoctf{" in lowered
+            match = _FLAG_PATTERN.search(value)
+            return match.group(0) if match else None
         if isinstance(value, dict):
-            return any(AutonomousOrchestrator._contains_flag(item) for item in value.values())
-        if isinstance(value, (list, tuple)):
-            return any(AutonomousOrchestrator._contains_flag(item) for item in value)
-        return False
+            for item in value.values():
+                found = cls._find_flag(item)
+                if found:
+                    return found
+        elif isinstance(value, (list, tuple)):
+            for item in value:
+                found = cls._find_flag(item)
+                if found:
+                    return found
+        return None
