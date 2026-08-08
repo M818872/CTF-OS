@@ -1,5 +1,5 @@
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 
 @dataclass(frozen=True)
@@ -48,6 +48,5 @@ def list_tools() -> list[ToolDefinition]:
     return list(TOOL_REGISTRY.values())
 
 
-# Import after the registry primitives exist so decorators can register every
-# specialist adapter without creating a circular initialization dependency.
-from app.tools import specialists as _specialists  # noqa: E402, F401
+# Import after registry primitives exist so decorators register specialist adapters.
+from app.tools import specialists as _specialists  # noqa: F401
