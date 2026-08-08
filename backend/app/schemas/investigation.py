@@ -45,12 +45,25 @@ class EvidenceRead(EvidenceCreate):
     model_config = {"from_attributes": True}
 
 
+class ArtifactRead(BaseModel):
+    id: UUID
+    investigation_id: UUID
+    filename: str
+    content_type: str
+    size_bytes: int
+    sha256: str
+    storage_key: str
+    created_at: datetime
+    model_config = {"from_attributes": True}
+
+
 class WorkspaceRead(BaseModel):
     investigation: InvestigationRead
     specialists: list[str]
     capabilities: list[str]
     activities: list[ActivityRead]
     evidence: list[EvidenceRead] = Field(default_factory=list)
+    artifacts: list[ArtifactRead] = Field(default_factory=list)
 
 
 class PlanRequest(BaseModel):
