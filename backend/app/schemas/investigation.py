@@ -50,7 +50,7 @@ class WorkspaceRead(BaseModel):
     specialists: list[str]
     capabilities: list[str]
     activities: list[ActivityRead]
-    evidence: list[EvidenceRead] = []
+    evidence: list[EvidenceRead] = Field(default_factory=list)
 
 
 class PlanRequest(BaseModel):
