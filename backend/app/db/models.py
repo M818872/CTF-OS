@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from datetime import datetime
 from uuid import UUID, uuid4
 
@@ -19,7 +21,9 @@ class Investigation(Base):
     input_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     activities: Mapped[list[InvestigationActivity]] = relationship(
-        back_populates="investigation", cascade="all, delete-orphan", order_by="InvestigationActivity.created_at"
+        back_populates="investigation",
+        cascade="all, delete-orphan",
+        order_by="InvestigationActivity.created_at",
     )
 
 
