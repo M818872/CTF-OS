@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import type { FormEvent } from "react";
 
 type Investigation = {
   id: string;
@@ -107,7 +108,7 @@ export default function Home() {
           </p>
         </div>
         <div className="pipeline">
-          {['Challenge', 'Manager', 'Workflow', 'Capability', 'Evidence', 'Report'].map((step) => (
+          {["Challenge", "Manager", "Workflow", "Capability", "Evidence", "Report"].map((step) => (
             <span key={step}>{step}</span>
           ))}
         </div>
