@@ -46,3 +46,8 @@ def get_tool(name: str) -> ToolDefinition | None:
 
 def list_tools() -> list[ToolDefinition]:
     return list(TOOL_REGISTRY.values())
+
+
+# Import after the registry primitives exist so decorators can register every
+# specialist adapter without creating a circular initialization dependency.
+from app.tools import specialists as _specialists  # noqa: E402, F401
