@@ -16,3 +16,16 @@ class ExecuteCapabilityResponse(BaseModel):
     status: str
     summary: str
     data: dict
+
+
+class TerminalExecuteRequest(BaseModel):
+    command: str = Field(min_length=1, max_length=4000)
+
+
+class TerminalExecuteResponse(BaseModel):
+    command: str
+    returncode: int
+    stdout: str
+    stderr: str
+    timed_out: bool
+    tokens: list[str]
