@@ -7,6 +7,7 @@ services:
       CTF_OS_ENVIRONMENT: development
       CTF_OS_DEBUG: "true"
       CTF_OS_LOG_LEVEL: INFO
+      CTF_OS_DATABASE_URL: postgresql+asyncpg://ctfos:ctfos_dev_only@postgres:5432/ctfos
     ports:
       - "8000:8000"
     depends_on:
