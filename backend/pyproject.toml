@@ -12,6 +12,7 @@ dependencies = [
   "asyncpg>=0.30,<1.0",
   "aiosqlite>=0.21,<1.0",
   "alembic>=1.16,<2.0",
+  "python-multipart>=0.0.20,<1.0",
 ]
 
 [project.optional-dependencies]
@@ -22,6 +23,11 @@ dev = [
   "ruff>=0.12,<1.0",
   "mypy>=1.17,<2.0",
 ]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
+exclude = ["tests*", "migrations*"]
 
 [tool.ruff]
 line-length = 100

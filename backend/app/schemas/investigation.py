@@ -17,7 +17,6 @@ class InvestigationRead(BaseModel):
     status: str
     input_text: str | None
     created_at: datetime
-
     model_config = {"from_attributes": True}
 
 
@@ -28,7 +27,33 @@ class ActivityRead(BaseModel):
     status: str
     details: str | None
     created_at: datetime
+    model_config = {"from_attributes": True}
 
+
+class EvidenceCreate(BaseModel):
+    kind: str = Field(default="observation", min_length=1, max_length=50)
+    title: str = Field(min_length=1, max_length=200)
+    content: str = Field(min_length=1, max_length=100000)
+    source: str = Field(default="agent", min_length=1, max_length=100)
+    confidence: float = Field(default=1.0, ge=0.0, le=1.0)
+
+
+class EvidenceRead(EvidenceCreate):
+    id: UUID
+    investigation_id: UUID
+    created_at: datetime
+    model_config = {"from_attributes": True}
+
+
+class ArtifactRead(BaseModel):
+    id: UUID
+    investigation_id: UUID
+    filename: str
+    content_type: str
+    size_bytes: int
+    sha256: str
+    storage_key: str
+    created_at: datetime
     model_config = {"from_attributes": True}
 
 
@@ -37,6 +62,8 @@ class WorkspaceRead(BaseModel):
     specialists: list[str]
     capabilities: list[str]
     activities: list[ActivityRead]
+    evidence: list[EvidenceRead] = Field(default_factory=list)
+    artifacts: list[ArtifactRead] = Field(default_factory=list)
 
 
 class PlanRequest(BaseModel):
