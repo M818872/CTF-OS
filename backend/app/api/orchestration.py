@@ -35,7 +35,7 @@ async def run_orchestration(payload: RunRequest) -> RunResponse:
 
     planner = ObservationAwarePlanner(capabilities)
     orchestrator = AutonomousOrchestrator(CapabilityExecutionService(), planner, payload.max_steps)
-    observations, flag = orchestrator.run(payload.goal)
+    observations, flag = await orchestrator.run_async(payload.goal)
     return RunResponse(
         observations=[ObservationRead(**item.__dict__) for item in observations],
         steps=len(observations),
