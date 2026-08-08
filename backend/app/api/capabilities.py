@@ -1,6 +1,5 @@
-from fastapi import APIRouter
-
 from ctfos_sdk import Capability
+from fastapi import APIRouter
 
 from app.core.registry import CapabilityRegistry
 from app.specialists.catalog import SPECIALISTS
