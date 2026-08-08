@@ -2,8 +2,8 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from app.services.execution import CapabilityExecutionService
-from app.services.orchestrator import AutonomousOrchestrator, Observation
-from app.services.planner import DeterministicPlanner
+from app.services.orchestrator import AutonomousOrchestrator
+from app.services.strategy import ObservationAwarePlanner
 from app.tools.registry import list_tools
 
 router = APIRouter(prefix="/orchestration", tags=["orchestration"])
@@ -33,7 +33,7 @@ async def run_orchestration(payload: RunRequest) -> RunResponse:
     if not capabilities:
         raise HTTPException(status_code=503, detail="No capabilities are registered")
 
-    planner = DeterministicPlanner(capabilities)
+    planner = ObservationAwarePlanner(capabilities)
     orchestrator = AutonomousOrchestrator(CapabilityExecutionService(), planner, payload.max_steps)
     observations, flag = orchestrator.run(payload.goal)
     return RunResponse(
