@@ -99,7 +99,7 @@ def reverse_analyze(value: str) -> ToolResult:
 @register_tool("network.identify", "Identify common packet-capture signatures without network access.")
 def network_identify(value: str) -> ToolResult:
     raw = _text(value).lower()
-    capture = "pcap" if raw.startswith("d4c3b2a1") or raw.startswith("a1b2c3d4") else None
+    capture = "pcap" if raw.startswith(("d4c3b2a1", "a1b2c3d4")) else None
     return _result("Network artifact identification completed.", format=capture)
 
 
