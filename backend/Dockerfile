@@ -6,12 +6,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-COPY pyproject.toml ./
+COPY backend/pyproject.toml ./backend/pyproject.toml
+COPY sdk ./sdk
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir .
+    pip install --no-cache-dir ./sdk ./backend
 
-COPY app ./app
+COPY backend/app ./backend/app
 
+WORKDIR /app/backend
 EXPOSE 8000
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
