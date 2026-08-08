@@ -1,0 +1,43 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    environment:
+      CTF_OS_ENVIRONMENT: development
+      CTF_OS_DEBUG: "true"
+      CTF_OS_LOG_LEVEL: INFO
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ctfos
+      POSTGRES_USER: ctfos
+      POSTGRES_PASSWORD: ctfos_dev_only
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ctfos -d ctfos"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:8-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:
