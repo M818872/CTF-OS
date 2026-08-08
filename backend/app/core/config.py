@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     debug: bool = False
     api_prefix: str = "/api"
     log_level: str = "INFO"
+    database_url: str = "sqlite+aiosqlite:///./ctfos.db"
 
     model_config = SettingsConfigDict(
         env_prefix="CTF_OS_",
