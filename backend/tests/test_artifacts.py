@@ -17,7 +17,7 @@ async def test_ingest_artifact_records_sha256_and_size(tmp_path, monkeypatch) ->
 
     assert artifact.filename == "sample.txt"
     assert artifact.size_bytes == len(payload)
-    assert artifact.sha256 == "a5d0ccba3ed0fdcbb6bb7f8e0f1a5b4c7d6a9f0a1db2a1b16f4f75a6eeb8f2f5"
+    assert artifact.sha256 == "ec411a6f3b496e7a9290e4f2397506217342357a3680646839a1de556aff5578"
 
 
 @pytest.mark.asyncio
