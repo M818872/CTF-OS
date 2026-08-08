@@ -15,7 +15,7 @@ class Investigation:
 
 
 class InvestigationAgent:
-    """Small orchestration layer; reasoning and execution stay behind interfaces."""
+    """Orchestrates planning; model calls and execution stay behind interfaces."""
 
     def __init__(self, registry: CapabilityRegistry) -> None:
         self.registry = registry
@@ -27,6 +27,7 @@ class InvestigationAgent:
         return Investigation(objective=objective, status="planned")
 
     def plan(self, investigation: Investigation, capabilities: list[str]) -> Investigation:
+        investigation.tasks = []
         for name in capabilities:
             if self.registry.get(name) is not None:
                 investigation.tasks.append(name)
