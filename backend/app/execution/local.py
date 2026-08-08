@@ -43,7 +43,7 @@ class LocalExecutor:
             stdout, stderr = await asyncio.wait_for(
                 process.communicate(), timeout=request.timeout_seconds
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             process.kill()
             stdout, stderr = await process.communicate()
             return ExecutionResult(
