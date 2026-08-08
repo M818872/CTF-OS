@@ -2,9 +2,7 @@
 
 ## Current milestone
 
-**Alpha 0.1 — Foundation**
-
-This branch contains the first executable foundation of CTF-OS.
+**Alpha 0.1 — Integrated foundation**
 
 ### Implemented
 
@@ -12,46 +10,58 @@ This branch contains the first executable foundation of CTF-OS.
 - Typed environment configuration
 - Structured JSON logging
 - Health endpoint
-- Docker Compose development services
+- Docker Compose with backend, frontend, PostgreSQL, and Redis
 - PostgreSQL and Redis health checks
+- SQLAlchemy async database layer
 - Minimal SDK contracts
 - Capability registry
-- Deterministic investigation agent
+- Deterministic investigation manager/agent
+- Policy-bounded local executor
+- Sequential workflow engine
+- Crypto specialist and crypto workflow
+- Evidence store and investigation timeline primitives
+- Deterministic Markdown report generation
+- Investigation API
 - Backend unit tests
-- GitHub Actions quality workflow
+- Frontend Next.js dashboard shell
+- Backend and frontend GitHub Actions workflows
 
-## Agent contract
+## Runtime contract
 
-The investigation agent is intentionally small. It does not execute operating-system commands and it does not invent tool names. It plans against registered capabilities and delegates execution to later runtime components.
+The agent plans against registered capabilities. It does not invent tool names or bypass the execution policy. External execution is isolated behind an executor interface so policy, planning, and execution remain independently testable.
 
 ```text
 Investigation
     -> Manager / Agent
     -> Workflow
     -> Capability Registry
-    -> Executor
-    -> Evidence
+    -> Executor / Specialist
+    -> Evidence + Timeline
+    -> Report
 ```
 
-This separation keeps reasoning, policy, and execution independently testable.
+## Remaining Alpha work
 
-## Build order
-
-1. Foundation
-2. Execution runtime
-3. Plugin SDK
-4. Workflow engine
-5. First specialist (Crypto)
-6. Investigation API
-7. Timeline and evidence
-8. Report generation
-9. Additional specialists
+1. Add persistent evidence/timeline tables and migrations.
+2. Connect investigation execution to the workflow engine through an API job boundary.
+3. Add artifact/file ingestion with size and type limits.
+4. Add plugin discovery and version validation.
+5. Add more Crypto capabilities (XOR, Caesar, common encodings and candidate ranking).
+6. Add Web, Forensics, Reverse, Stego, Network, OSINT, Mobile, Cloud, and AD specialist contracts.
+7. Add browser execution through an isolated Playwright worker.
+8. Add terminal UI and live event streaming.
+9. Add end-to-end Docker validation and frontend/backend integration tests.
+10. Run the complete CI suite and review the branch before merging to `main`.
 
 ## Definition of done for Alpha 0.1
 
-- Backend container builds.
+- Backend and frontend containers build.
 - `/api/health` returns HTTP 200.
-- Backend tests pass.
+- Backend and frontend tests/builds pass.
 - Static checks pass.
 - Local PostgreSQL and Redis services start through Compose.
 - Manager can create and plan an investigation against registered capabilities.
+- Execution is policy bounded and test covered.
+- Crypto findings become evidence and timeline events.
+- Reports can be generated from recorded evidence.
+- All Alpha CI checks are green.
