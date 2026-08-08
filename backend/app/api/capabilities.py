@@ -1,5 +1,7 @@
 from fastapi import APIRouter
 
+from ctfos_sdk import Capability
+
 from app.core.registry import CapabilityRegistry
 from app.specialists.catalog import SPECIALISTS
 
@@ -9,7 +11,7 @@ _registry = CapabilityRegistry()
 for specialist in SPECIALISTS:
     for capability in specialist.capabilities:
         _registry.register(
-            capability=__import__("ctfos_sdk", fromlist=["Capability"]).Capability(
+            capability=Capability(
                 name=capability,
                 description=f"{specialist.name}: {specialist.description}",
             ),
