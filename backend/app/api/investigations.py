@@ -11,6 +11,16 @@ from app.schemas.investigation import InvestigationCreate, InvestigationRead
 router = APIRouter(prefix="/investigations", tags=["investigations"])
 
 
+@router.get("", response_model=list[InvestigationRead])
+async def list_investigations(
+    session: AsyncSession = Depends(get_session),  # noqa: B008
+) -> list[Investigation]:
+    result = await session.scalars(
+        select(Investigation).order_by(Investigation.created_at.desc())
+    )
+    return list(result.all())
+
+
 @router.post("", response_model=InvestigationRead, status_code=status.HTTP_201_CREATED)
 async def create_investigation(
     payload: InvestigationCreate,
