@@ -19,3 +19,30 @@ class InvestigationRead(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class ActivityRead(BaseModel):
+    id: UUID
+    kind: str
+    action: str
+    status: str
+    details: str | None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class WorkspaceRead(BaseModel):
+    investigation: InvestigationRead
+    specialists: list[str]
+    capabilities: list[str]
+    activities: list[ActivityRead]
+
+
+class PlanRequest(BaseModel):
+    goal: str | None = Field(default=None, max_length=5000)
+
+
+class ExecuteRequest(BaseModel):
+    capability: str
+    input_text: str = Field(default="", max_length=10000)
