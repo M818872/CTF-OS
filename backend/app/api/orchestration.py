@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from app.services.execution import CapabilityExecutionService
-from app.services.orchestrator import AutonomousOrchestrator
+from app.services.orchestrator import AutonomousOrchestrator, Observation
 from app.services.planner import DeterministicPlanner
 from app.tools.registry import list_tools
 
@@ -24,6 +24,7 @@ class ObservationRead(BaseModel):
 class RunResponse(BaseModel):
     observations: list[ObservationRead]
     steps: int
+    flag: str | None = None
 
 
 @router.post("/run", response_model=RunResponse)
@@ -34,8 +35,9 @@ async def run_orchestration(payload: RunRequest) -> RunResponse:
 
     planner = DeterministicPlanner(capabilities)
     orchestrator = AutonomousOrchestrator(CapabilityExecutionService(), planner, payload.max_steps)
-    observations = orchestrator.run(payload.goal)
+    observations, flag = orchestrator.run(payload.goal)
     return RunResponse(
         observations=[ObservationRead(**item.__dict__) for item in observations],
         steps=len(observations),
+        flag=flag,
     )
