@@ -2,14 +2,14 @@
 
 ## Current milestone
 
-**Alpha 0.1 — Integrated investigation foundation**
+**Alpha 0.2 — Persistent investigation artifacts**
 
 ### Implemented
 
 - FastAPI backend bootstrap with typed configuration and structured logging
 - Health endpoint and Docker Compose development stack
 - PostgreSQL/Redis service definitions with health checks
-- SQLAlchemy investigation and activity persistence models
+- SQLAlchemy investigation, activity, evidence, and artifact persistence models
 - Minimal typed SDK contracts
 - Global capability registry and specialist catalog
 - Deterministic Global Manager / autonomous specialist routing
@@ -23,10 +23,11 @@
 - Investigation timeline/activity recording
 - Deterministic Markdown report generation
 - Investigation create/list/workspace/plan/execute/report APIs
+- Evidence create/list APIs with confidence and source metadata
+- Bounded artifact upload with filename sanitization, 10 MiB limit, SHA-256 hashing, and local storage key
 - Next.js investigation dashboard and investigation workspace
 - Controlled capability execution from the workspace
-- Backend unit/integration tests for manager, workflow, evidence, specialists, Tool Bus and Kali boundaries
-- Backend and frontend GitHub Actions validation
+- Backend unit/integration tests and GitHub Actions validation
 
 ## Runtime contract
 
@@ -42,37 +43,26 @@ Challenge
     -> Shared Tool Bus
     -> Policy-bounded Executor
     -> Evidence + Timeline
+    -> Artifacts
     -> Report
 ```
 
-## Alpha completion criteria
+## Alpha 0.2 completion criteria
 
-The integrated foundation is considered build-complete when:
-
-- Backend and frontend CI checks are green.
+- Evidence and artifact records persist with an investigation.
+- Evidence and artifact APIs validate ownership through the investigation ID.
+- Artifact uploads are bounded to 10 MiB and receive SHA-256 integrity metadata.
+- Reports include timeline, evidence, and artifact summaries.
 - Backend static checks and tests pass.
-- Frontend lint, type-check and production build pass.
-- Investigation creation and workspace retrieval work through the API.
-- Manager planning produces specialist/capability work.
-- Tool execution accepts only registered capabilities.
-- Execution has bounded timeout and no shell-string interpretation.
-- Findings can be represented as evidence and timeline events.
-- Reports can be generated from investigation records.
-- Docker Compose definitions remain available for local service orchestration.
 
-These criteria are currently satisfied on `feature/bootstrap` by the validated CI baseline.
+A PostgreSQL migration is included at `backend/migrations/001_alpha_persistence.sql`; development startup also creates the declared SQLAlchemy tables automatically.
 
-## Post-alpha hardening / expansion
+## Next hardening / expansion
 
-These are deliberately separate from the build-complete foundation rather than pretending they already exist:
-
-1. Persist evidence as first-class SQL tables with migrations.
-2. Add a durable background job queue for long-running tool execution.
-3. Add artifact/file ingestion with strict size/type/sandbox controls.
-4. Add signed/versioned plugin discovery.
-5. Expand specialist-specific workflows across Web, Forensics, Reverse, Stego, Network, OSINT, Mobile, Cloud and AD.
-6. Add isolated browser automation through a dedicated worker.
-7. Add live event streaming and terminal UI.
-8. Add full Docker end-to-end tests including PostgreSQL and Redis.
-9. Add authentication, authorization, secrets management and production observability.
-10. Review and merge the validated branch into `main` when the project owner is ready.
+1. Add a durable background job queue for long-running tool execution.
+2. Add signed/versioned plugin discovery.
+3. Expand specialist-specific workflows across Web, Forensics, Reverse, Stego, Network, OSINT, Mobile, Cloud and AD.
+4. Add isolated browser automation through a dedicated worker.
+5. Add live event streaming and terminal UI.
+6. Add full Docker end-to-end tests including PostgreSQL and Redis.
+7. Add authentication, authorization, secrets management and production observability.
