@@ -7,10 +7,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.autonomy import AutonomousRouter
-from app.db.models import Investigation, InvestigationActivity
+from app.db.models import Evidence, Investigation, InvestigationActivity
 from app.db.session import get_session
 from app.schemas.investigation import (
     ActivityRead,
+    EvidenceCreate,
+    EvidenceRead,
     ExecuteRequest,
     InvestigationCreate,
     InvestigationRead,
@@ -37,6 +39,11 @@ async def _workspace(investigation: Investigation, session: AsyncSession) -> Wor
         .where(InvestigationActivity.investigation_id == investigation.id)
         .order_by(InvestigationActivity.created_at.asc())
     )
+    evidence = await session.scalars(
+        select(Evidence)
+        .where(Evidence.investigation_id == investigation.id)
+        .order_by(Evidence.created_at.asc())
+    )
     tasks = router_agent.route(investigation.input_text or investigation.title)
     specialists = list(dict.fromkeys(task.specialist for task in tasks))
     capabilities = list(dict.fromkeys(capability for task in tasks for capability in task.capabilities))
@@ -45,6 +52,7 @@ async def _workspace(investigation: Investigation, session: AsyncSession) -> Wor
         specialists=specialists,
         capabilities=capabilities,
         activities=[ActivityRead.model_validate(item) for item in activities.all()],
+        evidence=[EvidenceRead.model_validate(item) for item in evidence.all()],
     )
 
 
@@ -91,25 +99,21 @@ async def plan_investigation(investigation_id: UUID, payload: PlanRequest, sessi
         )
     )
     if existing is None:
-        session.add(
-            InvestigationActivity(
-                investigation_id=investigation_id,
-                kind="plan",
-                action="Create investigation plan",
-                status="completed",
-                details="Route: " + ", ".join(task.specialist for task in tasks),
-            )
-        )
+        session.add(InvestigationActivity(
+            investigation_id=investigation_id,
+            kind="plan",
+            action="Create investigation plan",
+            status="completed",
+            details="Route: " + ", ".join(task.specialist for task in tasks),
+        ))
         for task in tasks:
-            session.add(
-                InvestigationActivity(
-                    investigation_id=investigation_id,
-                    kind="capability",
-                    action=f"Prepare {task.specialist} specialist",
-                    status="ready",
-                    details=", ".join(task.capabilities),
-                )
-            )
+            session.add(InvestigationActivity(
+                investigation_id=investigation_id,
+                kind="capability",
+                action=f"Prepare {task.specialist} specialist",
+                status="ready",
+                details=", ".join(task.capabilities),
+            ))
     investigation.status = "planned"
     await session.commit()
     return await _workspace(investigation, session)
@@ -122,18 +126,46 @@ async def execute_capability(investigation_id: UUID, payload: ExecuteRequest, se
     specialist = get_specialist(capability.split(".", 1)[0])
     if specialist is None or capability not in specialist.capabilities:
         raise HTTPException(status_code=400, detail="Unknown capability")
-    session.add(
-        InvestigationActivity(
-            investigation_id=investigation_id,
-            kind="execution",
-            action=f"Run capability {capability}",
-            status="queued",
-            details=payload.input_text.strip() or "No input supplied",
-        )
-    )
+    session.add(InvestigationActivity(
+        investigation_id=investigation_id,
+        kind="execution",
+        action=f"Run capability {capability}",
+        status="queued",
+        details=payload.input_text.strip() or "No input supplied",
+    ))
     investigation.status = "in_progress"
     await session.commit()
     return await _workspace(investigation, session)
+
+
+@router.get("/{investigation_id}/evidence", response_model=list[EvidenceRead])
+async def list_evidence(investigation_id: UUID, session: Session) -> list[Evidence]:
+    await _get_investigation(investigation_id, session)
+    result = await session.scalars(
+        select(Evidence)
+        .where(Evidence.investigation_id == investigation_id)
+        .order_by(Evidence.created_at.asc())
+    )
+    return list(result.all())
+
+
+@router.post("/{investigation_id}/evidence", response_model=EvidenceRead, status_code=status.HTTP_201_CREATED)
+async def add_evidence(
+    investigation_id: UUID, payload: EvidenceCreate, session: Session
+) -> Evidence:
+    await _get_investigation(investigation_id, session)
+    evidence = Evidence(investigation_id=investigation_id, **payload.model_dump())
+    session.add(evidence)
+    session.add(InvestigationActivity(
+        investigation_id=investigation_id,
+        kind="evidence",
+        action=f"Record evidence: {payload.title}",
+        status="recorded",
+        details=f"Source={payload.source}; confidence={payload.confidence:.2f}",
+    ))
+    await session.commit()
+    await session.refresh(evidence)
+    return evidence
 
 
 @router.get("/{investigation_id}/report", response_class=PlainTextResponse)
@@ -143,6 +175,11 @@ async def get_report(investigation_id: UUID, session: Session) -> str:
         select(InvestigationActivity)
         .where(InvestigationActivity.investigation_id == investigation_id)
         .order_by(InvestigationActivity.created_at.asc())
+    )
+    evidence = await session.scalars(
+        select(Evidence)
+        .where(Evidence.investigation_id == investigation_id)
+        .order_by(Evidence.created_at.asc())
     )
     lines = [
         f"# CTF-OS Investigation: {investigation.title}",
@@ -160,4 +197,12 @@ async def get_report(investigation_id: UUID, session: Session) -> str:
     )
     if not events:
         lines.append("- No activity recorded")
+    lines.extend(["", "## Evidence"])
+    findings = list(evidence.all())
+    lines.extend(
+        f"- **{item.title}** ({item.kind}, confidence={item.confidence:.2f}) — {item.content}"
+        for item in findings
+    )
+    if not findings:
+        lines.append("- No evidence recorded")
     return "\n".join(lines) + "\n"
