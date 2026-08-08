@@ -1,6 +1,6 @@
-from dataclasses import dataclass
 import shutil
 import subprocess
+from dataclasses import dataclass
 
 
 @dataclass(frozen=True, slots=True)
@@ -12,11 +12,7 @@ class CommandResult:
 
 
 class KaliRunner:
-    """Execute only explicitly allow-listed Kali binaries in a controlled workspace.
-
-    The caller supplies an executable name, never a shell command string. Shell
-    interpretation is disabled and the binary must exist in PATH.
-    """
+    """Execute only explicitly allow-listed Kali binaries in a controlled workspace."""
 
     def __init__(self, allowed: set[str], timeout: int = 30) -> None:
         self.allowed = frozenset(allowed)
