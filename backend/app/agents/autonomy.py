@@ -1,6 +1,7 @@
 from dataclasses import dataclass
+from typing import ClassVar
 
-from app.specialists.catalog import SpecialistDefinition, SPECIALISTS, get_specialist
+from app.specialists.catalog import SPECIALISTS, SpecialistDefinition, get_specialist
 
 
 @dataclass(frozen=True, slots=True)
@@ -13,7 +14,7 @@ class AgentTask:
 class AutonomousRouter:
     """Small deterministic router; LLM reasoning can be attached without changing contracts."""
 
-    _KEYWORDS: dict[str, tuple[str, ...]] = {
+    _KEYWORDS: ClassVar[dict[str, tuple[str, ...]]] = {
         "crypto": ("hash", "cipher", "encrypt", "decrypt", "base64", "xor", "rsa", "aes"),
         "web": ("http", "https", "website", "web", "api", "cookie", "login", "sql"),
         "forensics": ("pcap", "memory", "disk", "artifact", "metadata", "image", "file"),
