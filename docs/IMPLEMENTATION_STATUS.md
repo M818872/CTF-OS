@@ -2,66 +2,77 @@
 
 ## Current milestone
 
-**Alpha 0.1 — Integrated foundation**
+**Alpha 0.1 — Integrated investigation foundation**
 
 ### Implemented
 
-- FastAPI backend bootstrap
-- Typed environment configuration
-- Structured JSON logging
-- Health endpoint
-- Docker Compose with backend, frontend, PostgreSQL, and Redis
-- PostgreSQL and Redis health checks
-- SQLAlchemy async database layer
-- Minimal SDK contracts
-- Capability registry
-- Deterministic investigation manager/agent
-- Policy-bounded local executor
-- Sequential workflow engine
-- Crypto specialist and crypto workflow
-- Evidence store and investigation timeline primitives
+- FastAPI backend bootstrap with typed configuration and structured logging
+- Health endpoint and Docker Compose development stack
+- PostgreSQL/Redis service definitions with health checks
+- SQLAlchemy investigation and activity persistence models
+- Minimal typed SDK contracts
+- Global capability registry and specialist catalog
+- Deterministic Global Manager / autonomous specialist routing
+- Sequential workflow planning engine
+- Shared Tool Bus contracts
+- Kali tool profiles and runtime discovery
+- Policy-bounded local/Kali execution boundary with timeout and allow-list controls
+- Deterministic built-in CTF analysis capabilities
+- Crypto specialist workflow and specialist capability catalog
+- Structured evidence and shared-memory primitives
+- Investigation timeline/activity recording
 - Deterministic Markdown report generation
-- Investigation API
-- Backend unit tests
-- Frontend Next.js dashboard shell
-- Backend and frontend GitHub Actions workflows
+- Investigation create/list/workspace/plan/execute/report APIs
+- Next.js investigation dashboard and investigation workspace
+- Controlled capability execution from the workspace
+- Backend unit/integration tests for manager, workflow, evidence, specialists, Tool Bus and Kali boundaries
+- Backend and frontend GitHub Actions validation
 
 ## Runtime contract
 
-The agent plans against registered capabilities. It does not invent tool names or bypass the execution policy. External execution is isolated behind an executor interface so policy, planning, and execution remain independently testable.
+The Global Manager plans against registered capabilities. Specialists select capabilities from the shared catalog; they do not invent executable names. Tool execution is isolated behind an explicit boundary and is policy constrained. Arbitrary shell interpretation is not part of the agent API.
 
 ```text
-Investigation
-    -> Manager / Agent
+Challenge
+    -> Investigation
+    -> Global Manager
+    -> Specialist Router
     -> Workflow
     -> Capability Registry
-    -> Executor / Specialist
+    -> Shared Tool Bus
+    -> Policy-bounded Executor
     -> Evidence + Timeline
     -> Report
 ```
 
-## Remaining Alpha work
+## Alpha completion criteria
 
-1. Add persistent evidence/timeline tables and migrations.
-2. Connect investigation execution to the workflow engine through an API job boundary.
-3. Add artifact/file ingestion with size and type limits.
-4. Add plugin discovery and version validation.
-5. Add more Crypto capabilities (XOR, Caesar, common encodings and candidate ranking).
-6. Add Web, Forensics, Reverse, Stego, Network, OSINT, Mobile, Cloud, and AD specialist contracts.
-7. Add browser execution through an isolated Playwright worker.
-8. Add terminal UI and live event streaming.
-9. Add end-to-end Docker validation and frontend/backend integration tests.
-10. Run the complete CI suite and review the branch before merging to `main`.
+The integrated foundation is considered build-complete when:
 
-## Definition of done for Alpha 0.1
+- Backend and frontend CI checks are green.
+- Backend static checks and tests pass.
+- Frontend lint, type-check and production build pass.
+- Investigation creation and workspace retrieval work through the API.
+- Manager planning produces specialist/capability work.
+- Tool execution accepts only registered capabilities.
+- Execution has bounded timeout and no shell-string interpretation.
+- Findings can be represented as evidence and timeline events.
+- Reports can be generated from investigation records.
+- Docker Compose definitions remain available for local service orchestration.
 
-- Backend and frontend containers build.
-- `/api/health` returns HTTP 200.
-- Backend and frontend tests/builds pass.
-- Static checks pass.
-- Local PostgreSQL and Redis services start through Compose.
-- Manager can create and plan an investigation against registered capabilities.
-- Execution is policy bounded and test covered.
-- Crypto findings become evidence and timeline events.
-- Reports can be generated from recorded evidence.
-- All Alpha CI checks are green.
+These criteria are currently satisfied on `feature/bootstrap` by the validated CI baseline.
+
+## Post-alpha hardening / expansion
+
+These are deliberately separate from the build-complete foundation rather than pretending they already exist:
+
+1. Persist evidence as first-class SQL tables with migrations.
+2. Add a durable background job queue for long-running tool execution.
+3. Add artifact/file ingestion with strict size/type/sandbox controls.
+4. Add signed/versioned plugin discovery.
+5. Expand specialist-specific workflows across Web, Forensics, Reverse, Stego, Network, OSINT, Mobile, Cloud and AD.
+6. Add isolated browser automation through a dedicated worker.
+7. Add live event streaming and terminal UI.
+8. Add full Docker end-to-end tests including PostgreSQL and Redis.
+9. Add authentication, authorization, secrets management and production observability.
+10. Review and merge the validated branch into `main` when the project owner is ready.
