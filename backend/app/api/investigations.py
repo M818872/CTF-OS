@@ -14,7 +14,7 @@ router = APIRouter(prefix="/investigations", tags=["investigations"])
 @router.post("", response_model=InvestigationRead, status_code=status.HTTP_201_CREATED)
 async def create_investigation(
     payload: InvestigationCreate,
-    session: AsyncSession = Depends(get_session),
+    session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> Investigation:
     investigation = Investigation(**payload.model_dump())
     session.add(investigation)
@@ -26,7 +26,7 @@ async def create_investigation(
 @router.get("/{investigation_id}", response_model=InvestigationRead)
 async def get_investigation(
     investigation_id: UUID,
-    session: AsyncSession = Depends(get_session),
+    session: AsyncSession = Depends(get_session),  # noqa: B008
 ) -> Investigation:
     investigation = await session.scalar(
         select(Investigation).where(Investigation.id == investigation_id)
