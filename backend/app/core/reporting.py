@@ -14,9 +14,15 @@ class InvestigationReport:
 
     def markdown(self) -> str:
         lines = [f"# CTF-OS Investigation {self.investigation_id}", "", "## Findings"]
-        lines.extend(f"- {item}" for item in self.findings) or lines.append("- No findings")
+        if self.findings:
+            lines.extend(f"- {item}" for item in self.findings)
+        else:
+            lines.append("- No findings")
         lines.extend(["", "## Timeline"])
-        lines.extend(f"- {item}" for item in self.timeline) or lines.append("- No events")
+        if self.timeline:
+            lines.extend(f"- {item}" for item in self.timeline)
+        else:
+            lines.append("- No events")
         return "\n".join(lines) + "\n"
 
 
