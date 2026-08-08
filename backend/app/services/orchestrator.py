@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Protocol
 import re
 
+from app.persistence.runtime import RuntimeEventStore
 from app.services.execution import CapabilityExecutionService
 from app.services.memory import InvestigationMemory, MemoryEvent
 
@@ -28,15 +29,33 @@ _FLAG_PATTERN = re.compile(r"\b(?:CTF|FLAG|THM|HTB|PICOCTF)\{[^\r\n{}]{1,200}\}"
 
 
 class AutonomousOrchestrator:
-    """Runs an observe -> decide -> execute loop and records its trace."""
+    """Runs a bounded observe -> decide -> execute loop with durable tracing."""
 
-    def __init__(self, executor: CapabilityExecutionService, planner: Planner, max_steps: int = 12, memory: InvestigationMemory | None = None) -> None:
+    def __init__(self, executor: CapabilityExecutionService, planner: Planner, max_steps: int = 12, memory: InvestigationMemory | None = None, store: RuntimeEventStore | None = None) -> None:
         if max_steps < 1:
             raise ValueError("max_steps must be positive")
         self.executor = executor
         self.planner = planner
         self.max_steps = max_steps
         self.memory = memory or InvestigationMemory()
+        self.store = store
+
+    async def run_async(self, goal: str, investigation_id=None) -> tuple[list[Observation], str | None]:
+        observations: list[Observation] = []
+        for _ in range(self.max_steps):
+            action = self.planner.next_action(goal, observations)
+            if action is None:
+                break
+            await self._record("action", action.capability, action.input_text, "started", "Capability execution started.", {}, investigation_id)
+            result = self.executor.execute(action.capability, action.input_text).result
+            observation = Observation(action.capability, result.status, result.summary, result.data)
+            observations.append(observation)
+            await self._record("observation", action.capability, action.input_text, result.status, result.summary, result.data, investigation_id)
+            flag = self._find_flag(result.summary) or self._find_flag(result.data)
+            if flag:
+                await self._record("flag", action.capability, action.input_text, "found", "Candidate flag detected.", {"flag": flag}, investigation_id)
+                return observations, flag
+        return observations, None
 
     def run(self, goal: str, investigation_id=None) -> tuple[list[Observation], str | None]:
         observations: list[Observation] = []
@@ -54,6 +73,11 @@ class AutonomousOrchestrator:
                 self.memory.append(MemoryEvent(investigation_id, "flag", action.capability, action.input_text, "found", "Candidate flag detected.", {"flag": flag}))
                 return observations, flag
         return observations, None
+
+    async def _record(self, event_type: str, capability: str, input_text: str, status: str, summary: str, data: dict, investigation_id=None) -> None:
+        self.memory.append(MemoryEvent(investigation_id, event_type, capability, input_text, status, summary, data))
+        if self.store is not None:
+            await self.store.append(event_type, capability, input_text, status, summary, data, investigation_id)
 
     @classmethod
     def _find_flag(cls, value: object) -> str | None:
