@@ -46,30 +46,38 @@ class JobQueue:
         return await session.scalar(select(ExecutionJob).where(ExecutionJob.id == job_id))
 
     async def claim(self, session: AsyncSession) -> ExecutionJob | None:
-        now = datetime.now(timezone.utc)
-        stale_before = now - timedelta(seconds=LEASE_SECONDS)
-        query = (
-            select(ExecutionJob)
-            .where(
-                or_(
-                    (ExecutionJob.status == "queued") & (ExecutionJob.available_at <= now),
-                    (ExecutionJob.status == "running") & (ExecutionJob.locked_at <= stale_before),
+        while True:
+            now = datetime.now(timezone.utc)
+            stale_before = now - timedelta(seconds=LEASE_SECONDS)
+            query = (
+                select(ExecutionJob)
+                .where(
+                    or_(
+                        (ExecutionJob.status == "queued") & (ExecutionJob.available_at <= now),
+                        (ExecutionJob.status == "running") & (ExecutionJob.locked_at <= stale_before),
+                    )
                 )
+                .order_by(ExecutionJob.created_at.asc())
+                .limit(1)
+                .with_for_update(skip_locked=True)
             )
-            .order_by(ExecutionJob.created_at.asc())
-            .limit(1)
-            .with_for_update(skip_locked=True)
-        )
-        job = await session.scalar(query)
-        if job is None:
-            return None
-        job.status = "running"
-        job.locked_at = now
-        job.started_at = job.started_at or now
-        job.attempts += 1
-        await session.commit()
-        await session.refresh(job)
-        return job
+            job = await session.scalar(query)
+            if job is None:
+                return None
+            if job.status == "running" and job.attempts >= job.max_attempts:
+                job.status = "failed"
+                job.error = "execution lease expired after the retry limit was reached"
+                job.finished_at = now
+                job.locked_at = None
+                await session.commit()
+                continue
+            job.status = "running"
+            job.locked_at = now
+            job.started_at = job.started_at or now
+            job.attempts += 1
+            await session.commit()
+            await session.refresh(job)
+            return job
 
     async def complete(self, session: AsyncSession, job: ExecutionJob, result: dict[str, Any]) -> None:
         job.status = "completed"
