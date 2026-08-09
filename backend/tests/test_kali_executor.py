@@ -15,9 +15,15 @@ class FakeRunner:
         )
 
 
+class InstalledProvisioner:
+    @staticmethod
+    def installed(_tool) -> bool:
+        return True
+
+
 @pytest.mark.asyncio
 async def test_kali_executor_runs_catalog_tool_and_extracts_findings() -> None:
-    result = await KaliToolExecutor(FakeRunner()).run("nmap", ["-sV", "10.10.10.5"])
+    result = await KaliToolExecutor(FakeRunner(), InstalledProvisioner()).run("nmap", ["-sV", "10.10.10.5"])
     assert result.tool == "nmap"
     assert result.category == "network"
     assert result.returncode == 0
@@ -29,11 +35,11 @@ async def test_kali_executor_runs_catalog_tool_and_extracts_findings() -> None:
 
 @pytest.mark.asyncio
 async def test_kali_executor_quotes_arguments_without_shell_interpretation() -> None:
-    result = await KaliToolExecutor(FakeRunner()).run("curl", ["https://example.test/a b"])
+    result = await KaliToolExecutor(FakeRunner(), InstalledProvisioner()).run("curl", ["https://example.test/a b"])
     assert result.command == "curl 'https://example.test/a b'"
 
 
 @pytest.mark.asyncio
 async def test_kali_executor_rejects_unknown_tool() -> None:
     with pytest.raises(ValueError, match="unknown Kali tool"):
-        await KaliToolExecutor(FakeRunner()).run("not-a-kali-tool", [])
+        await KaliToolExecutor(FakeRunner(), InstalledProvisioner()).run("not-a-kali-tool", [])

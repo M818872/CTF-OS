@@ -44,9 +44,14 @@ class ToolBus(CapabilityExecutionService):
             return self._execution.execute(capability, input_text)
         return super().execute(capability, input_text)
 
-    async def execute_kali(self, tool_name: str, args: list[str]) -> KaliExecutionResult:
-        """Run a cataloged Kali tool through the configured CTF runtime."""
-        return await self._kali.run(tool_name, args)
+    async def execute_kali(
+        self,
+        tool_name: str,
+        args: list[str],
+        custom_install_command: str | None = None,
+    ) -> KaliExecutionResult:
+        """Run a cataloged Kali tool, provisioning it when configured to do so."""
+        return await self._kali.run(tool_name, args, custom_install_command)
 
     def capabilities_for(self, specialist: str) -> tuple[str, ...]:
         return tuple(route.capability for route in self._routes.values() if route.specialist == specialist)
