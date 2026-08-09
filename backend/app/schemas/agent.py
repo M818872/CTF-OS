@@ -10,7 +10,9 @@ class SolveChallengeRequest(BaseModel):
 
 class SolveChallengeResponse(BaseModel):
     id: UUID
+    job_id: UUID
     status: str
     specialists: list[str]
     capabilities: list[str]
+    flag: str | None = None
     message: str
