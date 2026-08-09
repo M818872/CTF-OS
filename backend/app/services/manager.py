@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
 from uuid import UUID, uuid4
 
+from app.services.execution import CapabilityExecutionService
 from app.services.orchestrator import AutonomousOrchestrator
 from app.services.strategy import ObservationAwarePlanner
 from app.tools.registry import list_tools
@@ -28,7 +30,7 @@ class Investigation:
 class GlobalManager:
     """Own the investigation lifecycle and delegate solving to orchestration."""
 
-    def __init__(self, orchestrator_factory=None) -> None:
+    def __init__(self, orchestrator_factory: Callable[[int], AutonomousOrchestrator] | None = None) -> None:
         self._investigations: dict[UUID, Investigation] = {}
         self._orchestrator_factory = orchestrator_factory or self._default_orchestrator
 
@@ -49,6 +51,8 @@ class GlobalManager:
             raise KeyError(f"unknown investigation: {investigation_id}")
         if current.status == InvestigationStatus.RUNNING:
             raise RuntimeError("investigation is already running")
+        if max_steps < 1:
+            raise ValueError("max_steps must be positive")
 
         self._investigations[investigation_id] = Investigation(
             current.id, current.goal, InvestigationStatus.RUNNING, current.steps, current.flag
@@ -78,7 +82,7 @@ class GlobalManager:
         if not capabilities:
             raise RuntimeError("no capabilities are registered")
         return AutonomousOrchestrator(
-            executor=__import__("app.services.execution", fromlist=["CapabilityExecutionService"]).CapabilityExecutionService(),
+            executor=CapabilityExecutionService(),
             planner=ObservationAwarePlanner(capabilities),
             max_steps=max_steps,
         )
