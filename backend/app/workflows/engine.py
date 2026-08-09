@@ -31,7 +31,7 @@ class WorkflowEngine:
                 await self.hook(step, "started")
             try:
                 ok = await self.runner(step)
-            except Exception:
+            except (RuntimeError, ValueError, TypeError):
                 if self.hook is not None:
                     await self.hook(step, "failed")
                 return WorkflowResult("failed", tuple(completed), step.id)
