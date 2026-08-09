@@ -1,6 +1,7 @@
 import pytest
 
 from app.services.manager import GlobalManager, InvestigationStatus
+from app.tools.bus import ToolBus
 
 
 class FakeOrchestrator:
@@ -16,6 +17,11 @@ def test_create_normalizes_goal() -> None:
     assert investigation.goal == "solve challenge"
     assert investigation.status == InvestigationStatus.CREATED
     assert manager.get(investigation.id) == investigation
+
+
+def test_default_orchestrator_uses_tool_bus() -> None:
+    orchestrator = GlobalManager._default_orchestrator(2)
+    assert isinstance(orchestrator.executor, ToolBus)
 
 
 @pytest.mark.asyncio
