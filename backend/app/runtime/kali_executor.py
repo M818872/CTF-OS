@@ -7,8 +7,6 @@ from dataclasses import dataclass
 from app.runtime.command_runner import CommandRunner
 from app.runtime.kali_catalog import KaliTool, get_kali_tool
 from app.runtime.result_parser import extract_tokens
-
-
 _IP = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
 _URL = re.compile(r"https?://[^\s\"'<>]+")
 _HEX_HASH = re.compile(r"\b[a-fA-F0-9]{32,128}\b")
