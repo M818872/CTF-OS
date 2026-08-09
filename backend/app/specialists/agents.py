@@ -3,7 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from app.specialists.catalog import SpecialistDefinition, get_specialist
-from app.tools.registry import ToolResult, get_tool
+from app.tools.bus import ToolBus
+from app.tools.registry import ToolResult
 
 
 @dataclass(frozen=True, slots=True)
@@ -21,10 +22,11 @@ class SpecialistResult:
 
 
 class SpecialistAgent:
-    """Expose one specialist domain through its catalog-approved capabilities."""
+    """Expose one specialist domain through its catalog-approved tool bus."""
 
-    def __init__(self, definition: SpecialistDefinition) -> None:
+    def __init__(self, definition: SpecialistDefinition, bus: ToolBus | None = None) -> None:
         self.definition = definition
+        self.bus = bus or ToolBus()
 
     @property
     def name(self) -> str:
@@ -47,18 +49,16 @@ class SpecialistAgent:
             raise ValueError("action belongs to a different specialist")
         if action.capability not in self.definition.capabilities:
             raise ValueError(f"capability {action.capability!r} is not registered to {self.name!r}")
-        tool = get_tool(action.capability)
-        if tool is None:
-            raise RuntimeError(f"registered specialist capability is unavailable: {action.capability}")
-        return SpecialistResult(self.name, action.capability, tool.handler(action.input_text))
+        result = self.bus.execute(action.capability, action.input_text)
+        return SpecialistResult(self.name, action.capability, result.result)
 
 
-def get_agent(name: str) -> SpecialistAgent | None:
+def get_agent(name: str, bus: ToolBus | None = None) -> SpecialistAgent | None:
     definition = get_specialist(name)
-    return SpecialistAgent(definition) if definition is not None else None
+    return SpecialistAgent(definition, bus) if definition is not None else None
 
 
-def list_agents() -> tuple[SpecialistAgent, ...]:
+def list_agents(bus: ToolBus | None = None) -> tuple[SpecialistAgent, ...]:
     from app.specialists.catalog import SPECIALISTS
 
-    return tuple(SpecialistAgent(item) for item in SPECIALISTS)
+    return tuple(SpecialistAgent(item, bus) for item in SPECIALISTS)
