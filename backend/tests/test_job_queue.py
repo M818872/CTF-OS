@@ -1,5 +1,3 @@
-from uuid import uuid4
-
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.db.models import Base
