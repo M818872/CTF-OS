@@ -6,6 +6,7 @@ import os
 
 from app.db.models import Base
 from app.db.session import engine, session_factory
+from app.services.ctf_solver import CtfSolver
 from app.services.execution import CapabilityExecutionService
 from app.services.job_queue import JobQueue
 
@@ -17,6 +18,7 @@ class ExecutionWorker:
     def __init__(self) -> None:
         self.queue = JobQueue()
         self.executor = CapabilityExecutionService()
+        self.solver = CtfSolver()
 
     async def initialize(self) -> None:
         async with engine.begin() as connection:
@@ -29,18 +31,31 @@ class ExecutionWorker:
             return False
 
         try:
-            if job.kind != "terminal.execute":
+            if job.kind == "terminal.execute":
+                command = str(job.payload.get("command", ""))
+                result = await self.executor.execute_terminal(command)
+                result_data: dict[str, object] = {
+                    "command": result.command,
+                    "returncode": result.returncode,
+                    "stdout": result.stdout,
+                    "stderr": result.stderr,
+                    "timed_out": result.timed_out,
+                    "tokens": result.tokens,
+                }
+            elif job.kind == "ctf.solve":
+                solve = await self.solver.solve(
+                    challenge=str(job.payload.get("challenge", "")),
+                    url=str(job.payload["url"]) if job.payload.get("url") else None,
+                    artifact_path=str(job.payload["artifact_path"]) if job.payload.get("artifact_path") else None,
+                )
+                result_data = {
+                    "flag": solve.flag,
+                    "steps": solve.steps,
+                    "summary": solve.summary,
+                }
+            else:
                 raise ValueError(f"unsupported execution job kind: {job.kind}")
-            command = str(job.payload.get("command", ""))
-            result = await self.executor.execute_terminal(command)
-            result_data = {
-                "command": result.command,
-                "returncode": result.returncode,
-                "stdout": result.stdout,
-                "stderr": result.stderr,
-                "timed_out": result.timed_out,
-                "tokens": result.tokens,
-            }
+
             async with session_factory() as session:
                 current = await self.queue.get(session, job.id)
                 if current is not None:
