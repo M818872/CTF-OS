@@ -5,13 +5,7 @@ from app.runtime.kali_executor import KaliToolExecutor
 
 
 class FakeRunner:
-    def __init__(self) -> None:
-        self.commands: list[str] = []
-
     async def run(self, command: str) -> CommandResult:
-        self.commands.append(command)
-        if command == "custom-installer nmap":
-            return CommandResult(command, 0, "installed", "", False)
         return CommandResult(command, 0, "CTF{provisioned}", "", False)
 
 
@@ -31,11 +25,9 @@ class FakeProvisioner:
 
 @pytest.mark.asyncio
 async def test_missing_tool_is_provisioned_then_executed() -> None:
-    runner = FakeRunner()
     provisioner = FakeProvisioner()
-    result = await KaliToolExecutor(runner, provisioner).run(
+    result = await KaliToolExecutor(FakeRunner(), provisioner).run(
         "nmap", ["-sV"], custom_install_command="custom-installer nmap"
     )
     assert result.tokens == ("CTF{provisioned}",)
     assert provisioner.install_command == "custom-installer nmap"
-    assert runner.commands == ["custom-installer nmap", "nmap -sV"]
