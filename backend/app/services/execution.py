@@ -33,6 +33,27 @@ class CapabilityExecutionService:
             raise ValueError(f"Unknown capability: {capability}")
         return ExecutionResult(capability=capability, result=tool.handler(input_text))
 
+    async def execute_async(self, capability: str, input_text: str) -> ExecutionResult:
+        if capability == "terminal.execute":
+            terminal = await self.execute_terminal(input_text)
+            status = "success" if terminal.returncode == 0 and not terminal.timed_out else "failed"
+            return ExecutionResult(
+                capability=capability,
+                result=ToolResult(
+                    status=status,
+                    summary=terminal.stdout.strip() or terminal.stderr.strip() or "Terminal command completed with no output.",
+                    data={
+                        "command": terminal.command,
+                        "returncode": terminal.returncode,
+                        "stdout": terminal.stdout,
+                        "stderr": terminal.stderr,
+                        "timed_out": terminal.timed_out,
+                        "tokens": terminal.tokens,
+                    },
+                ),
+            )
+        return self.execute(capability, input_text)
+
     async def execute_terminal(self, command: str) -> TerminalExecutionResult:
         result = await self.runner.run(command)
         combined = f"{result.stdout}\n{result.stderr}"
