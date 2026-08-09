@@ -5,9 +5,9 @@ from dataclasses import dataclass
 from enum import StrEnum
 from uuid import UUID, uuid4
 
-from app.services.execution import CapabilityExecutionService
 from app.services.orchestrator import AutonomousOrchestrator
 from app.services.strategy import ObservationAwarePlanner
+from app.tools.bus import ToolBus
 from app.tools.registry import list_tools
 
 
@@ -82,7 +82,7 @@ class GlobalManager:
         if not capabilities:
             raise RuntimeError("no capabilities are registered")
         return AutonomousOrchestrator(
-            executor=CapabilityExecutionService(),
+            executor=ToolBus(),
             planner=ObservationAwarePlanner(capabilities),
             max_steps=max_steps,
         )
