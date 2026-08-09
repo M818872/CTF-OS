@@ -47,11 +47,11 @@ class AutonomousOrchestrator:
             if action is None:
                 break
             await self._record("action", action.capability, action.input_text, "started", "Capability execution started.", {}, investigation_id)
-            result = self.executor.execute(action.capability, action.input_text).result
-            observation = Observation(action.capability, result.status, result.summary, result.data)
+            result = await self.executor.execute_async(action.capability, action.input_text)
+            observation = Observation(action.capability, result.result.status, result.result.summary, result.result.data)
             observations.append(observation)
-            await self._record("observation", action.capability, action.input_text, result.status, result.summary, result.data, investigation_id)
-            flag = self._find_flag(result.summary) or self._find_flag(result.data)
+            await self._record("observation", action.capability, action.input_text, result.result.status, result.result.summary, result.result.data, investigation_id)
+            flag = self._find_flag(result.result.summary) or self._find_flag(result.result.data)
             if flag:
                 await self._record("flag", action.capability, action.input_text, "found", "Candidate flag detected.", {"flag": flag}, investigation_id)
                 return observations, flag

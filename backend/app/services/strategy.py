@@ -1,58 +1,59 @@
 from dataclasses import dataclass
 
 from app.services.orchestrator import Action, Observation
+from app.specialists.catalog import SPECIALISTS, SpecialistDefinition
 
 
 @dataclass(frozen=True)
 class StrategyRule:
     keywords: tuple[str, ...]
-    preferred: tuple[str, ...]
+    specialists: tuple[str, ...]
 
 
 class ObservationAwarePlanner:
-    """Reproducible planner that changes strategy from observed results.
-
-    This is intentionally deterministic: an LLM can implement the same
-    Planner protocol later without changing the orchestration loop.
-    """
+    """Deterministic planner backed by the canonical specialist catalog."""
 
     def __init__(self, capabilities: list[str]) -> None:
         self.capabilities = tuple(capabilities)
+        self.specialists = SPECIALISTS
         self.rules = (
-            StrategyRule(("http", "web", "url", "website", "login"), ("web", "analysis")),
-            StrategyRule(("pcap", "packet", "network", "traffic"), ("network", "forensics")),
-            StrategyRule(("image", "png", "jpg", "steg", "hidden"), ("stego", "forensics")),
-            StrategyRule(("cipher", "encrypt", "decrypt", "hash", "base64"), ("crypto", "analysis")),
-            StrategyRule(("binary", "elf", "exe", "reverse", "assembly"), ("reverse", "pwn")),
+            StrategyRule(("http", "web", "url", "website", "login", "cookie", "xss", "sql"), ("web",)),
+            StrategyRule(("pcap", "packet", "network", "traffic", "dns", "tcp", "udp"), ("network", "forensics")),
+            StrategyRule(("image", "png", "jpg", "jpeg", "steg", "hidden", "metadata"), ("stego", "forensics")),
+            StrategyRule(("cipher", "encrypt", "decrypt", "hash", "base64", "rsa", "xor"), ("crypto",)),
+            StrategyRule(("binary", "elf", "exe", "reverse", "assembly", "disassembly", "strings"), ("reverse", "pwn")),
+            StrategyRule(("buffer", "overflow", "rop", "heap", "canary", "format string"), ("pwn", "reverse")),
+            StrategyRule(("android", "apk", "mobile", "manifest", "dex"), ("mobile", "reverse")),
+            StrategyRule(("blockchain", "transaction", "wallet", "contract", "ethereum", "bitcoin"), ("blockchain",)),
+            StrategyRule(("username", "email", "domain", "osint", "social", "profile"), ("osint",)),
+            StrategyRule(("file", "disk", "memory", "artifact", "forensic", "document"), ("forensics",)),
         )
 
     def next_action(self, goal: str, observations: list[Observation]) -> Action | None:
-        if not goal.strip():
-            return None
-        available = list(self.capabilities)
-        if not available:
+        if not goal.strip() or not self.capabilities:
             return None
 
-        context = " ".join([goal, *(item.summary for item in observations)]).lower()
+        context = " ".join([goal, *(item.summary for item in observations), *(str(item.data) for item in observations)]).lower()
         preferred: list[str] = []
         for rule in self.rules:
             if any(keyword in context for keyword in rule.keywords):
-                preferred.extend(rule.preferred)
+                preferred.extend(rule.specialists)
 
-        candidates = self._rank(available, preferred)
-        for capability in candidates:
-            if not self._recently_used(capability, observations):
-                return Action(capability=capability, input_text=self._next_input(goal, observations))
+        available = [specialist for specialist in self.specialists if any(capability in self.capabilities for capability in specialist.capabilities)]
+        candidates = sorted(available, key=lambda specialist: self._specialist_score(specialist, preferred, context), reverse=True)
 
+        for specialist in candidates:
+            for capability in specialist.capabilities:
+                if capability in self.capabilities and not self._recently_used(capability, observations):
+                    return Action(capability=capability, input_text=self._next_input(goal, observations))
         return None
 
     @staticmethod
-    def _rank(available: list[str], preferred: list[str]) -> list[str]:
-        def score(name: str) -> tuple[int, str]:
-            lowered = name.lower()
-            return (max((len(key) for key in preferred if key in lowered), default=0), name)
-
-        return sorted(available, key=score, reverse=True)
+    def _specialist_score(specialist: SpecialistDefinition, preferred: list[str], context: str) -> tuple[int, int, str]:
+        explicit = 1 if specialist.name in preferred else 0
+        metadata = f"{specialist.name} {specialist.category} {specialist.description} {' '.join(specialist.capabilities)}".lower()
+        context_hits = sum(1 for token in set(context.split()) if len(token) >= 4 and token in metadata)
+        return explicit, context_hits, specialist.name
 
     @staticmethod
     def _recently_used(capability: str, observations: list[Observation]) -> bool:
