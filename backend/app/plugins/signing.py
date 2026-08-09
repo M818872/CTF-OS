@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import binascii
 import json
 from dataclasses import dataclass, replace
 from typing import Any
@@ -80,5 +81,5 @@ def verify_manifest(manifest: PluginManifest) -> bool:
         key = Ed25519PublicKey.from_public_bytes(_unb64(manifest.public_key))
         key.verify(_unb64(manifest.signature), manifest.unsigned_payload())
         return True
-    except (InvalidSignature, ValueError):
+    except (InvalidSignature, ValueError, binascii.Error):
         return False
