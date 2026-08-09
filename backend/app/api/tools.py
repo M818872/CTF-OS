@@ -81,7 +81,7 @@ async def enqueue_terminal_job(payload: ExecutionJobCreate, session: Session) ->
     )
     await session.commit()
     await session.refresh(job)
-    return job
+    return ExecutionJobRead.model_validate(job)
 
 
 @router.get("/jobs/{job_id}", response_model=ExecutionJobRead)
@@ -89,4 +89,4 @@ async def get_execution_job(job_id: UUID, session: Session) -> ExecutionJobRead:
     job = await queue.get(session, job_id)
     if job is None:
         raise HTTPException(status_code=404, detail="Execution job not found")
-    return job
+    return ExecutionJobRead.model_validate(job)
