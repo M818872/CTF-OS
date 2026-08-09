@@ -1,69 +1,93 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { FormEvent } from "react";
 
-type Investigation = {
+type SolveResponse = {
   id: string;
-  title: string;
-  challenge_type: string;
   status: string;
-  input_text: string | null;
-  created_at: string;
+  specialists: string[];
+  capabilities: string[];
+  message: string;
 };
 
-type Capability = { name: string; description: string; provider: string };
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
-const specialists = [
-  ["Crypto", "Encoding, hashes and classical cryptanalysis"], ["Web", "Discovery and application analysis"],
-  ["Forensics", "Files, artifacts and digital evidence"], ["Reverse", "Static and dynamic binary analysis"],
-  ["Network", "PCAP and protocol investigation"], ["Stego", "Hidden data and media analysis"],
-];
 
 export default function Home() {
-  const [investigations, setInvestigations] = useState<Investigation[]>([]);
-  const [capabilities, setCapabilities] = useState<Capability[]>([]);
-  const [title, setTitle] = useState(""); const [challengeType, setChallengeType] = useState("unknown");
-  const [inputText, setInputText] = useState(""); const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false); const [error, setError] = useState("");
+  const [challenge, setChallenge] = useState("");
+  const [url, setUrl] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [solving, setSolving] = useState(false);
+  const [result, setResult] = useState<SolveResponse | null>(null);
+  const [error, setError] = useState("");
 
-  async function loadDashboard() {
+  async function startSolve(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!challenge.trim() && !url.trim() && !file) return;
+    setSolving(true);
+    setError("");
+    setResult(null);
     try {
-      setError("");
-      const [ir, cr] = await Promise.all([fetch(`${API}/investigations`), fetch(`${API}/capabilities`)]);
-      if (!ir.ok || !cr.ok) throw new Error("CTF-OS backend is unavailable");
-      setInvestigations(await ir.json()); setCapabilities(await cr.json());
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Unable to connect to CTF-OS"); }
-    finally { setLoading(false); }
-  }
-  useEffect(() => { void loadDashboard(); }, []);
-
-  async function createInvestigation(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); if (!title.trim()) return; setCreating(true); setError("");
-    try {
-      const response = await fetch(`${API}/investigations`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: title.trim(), challenge_type: challengeType, input_text: inputText.trim() || null }) });
-      if (!response.ok) throw new Error("Could not create investigation");
-      setTitle(""); setInputText(""); setChallengeType("unknown"); await loadDashboard();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not create investigation"); }
-    finally { setCreating(false); }
+      const body = new FormData();
+      body.append("challenge", challenge.trim());
+      if (url.trim()) body.append("url", url.trim());
+      if (file) body.append("file", file);
+      const response = await fetch(`${API}/agent/solve`, { method: "POST", body });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail ?? "The CTF agent could not start");
+      setResult(data);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Unable to start the CTF agent");
+    } finally {
+      setSolving(false);
+    }
   }
 
-  return <main>
-    <header className="topbar"><div><div className="brand">CTF-OS</div><div className="muted">AI-native CTF investigation console</div></div><span className="status">Alpha 0.1</span></header>
-    <section className="hero card"><div><p className="eyebrow">INVESTIGATION WORKSPACE</p><h1>Turn a challenge into a traceable investigation.</h1><p className="muted hero-copy">Create a case, route work through specialist capabilities, and keep evidence attached to every meaningful action.</p></div><div className="pipeline">{["Challenge", "Manager", "Workflow", "Capability", "Evidence", "Report"].map((step) => <span key={step}>{step}</span>)}</div></section>
-    {error && <div className="alert">{error}</div>}
-    <section className="workspace">
-      <form className="card form-card" onSubmit={createInvestigation}><div className="section-heading"><div><p className="eyebrow">NEW CASE</p><h2>Start investigation</h2></div><span className="counter">{investigations.length} cases</span></div>
-        <label>Investigation title<input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. CryptoCabana key recovery" /></label>
-        <label>Challenge type<select value={challengeType} onChange={(e) => setChallengeType(e.target.value)}><option value="unknown">Auto-detect</option>{specialists.map(([name]) => <option key={name} value={name.toLowerCase()}>{name}</option>)}</select></label>
-        <label>Challenge notes / input<textarea value={inputText} onChange={(e) => setInputText(e.target.value)} placeholder="Paste challenge description, clues, URLs, hashes or observations..." rows={6} /></label>
-        <button type="submit" disabled={creating || !title.trim()}>{creating ? "Creating..." : "Create investigation"}</button>
-      </form>
-      <section className="card cases-card"><div className="section-heading"><div><p className="eyebrow">ACTIVE CASES</p><h2>Investigations</h2></div><button className="ghost" type="button" onClick={() => void loadDashboard()}>Refresh</button></div>
-        {loading ? <p className="muted">Loading investigations...</p> : investigations.length === 0 ? <div className="empty"><strong>No investigations yet.</strong><span>Create your first case to start the CTF-OS workflow.</span></div> : <div className="case-list">{investigations.map((item) => <Link href={`/investigations/${item.id}`} className="case" key={item.id}><div><strong>{item.title}</strong><span>{item.challenge_type} · {item.status}</span></div><time>{new Date(item.created_at).toLocaleString()}</time></Link>)}</div>}
+  return (
+    <main>
+      <header className="topbar">
+        <div><div className="brand">CTF-OS</div><div className="muted">Autonomous CTF solving agent</div></div>
+        <span className="status">READY</span>
+      </header>
+
+      <section className="hero card">
+        <div>
+          <p className="eyebrow">CTF AGENT</p>
+          <h1>Give it a challenge. Let the agent solve it.</h1>
+          <p className="muted hero-copy">Paste the challenge, provide a target URL, or upload the challenge files. CTF-OS will classify the challenge and prepare the appropriate specialist tools.</p>
+        </div>
+        <div className="pipeline"><span>INPUT</span><span>ANALYZE</span><span>TOOLS</span><span>EVIDENCE</span><span>FLAG</span></div>
       </section>
-    </section>
-    <section className="section-block"><div className="section-heading"><div><p className="eyebrow">SPECIALISTS</p><h2>Investigation capabilities</h2></div><span className="counter">{capabilities.length} registered</span></div><div className="grid">{specialists.map(([name, description]) => <div className="card capability" key={name}><span className="capability-mark">{name.slice(0, 1)}</span><div><h3>{name}</h3><p className="muted">{description}</p></div></div>)}</div></section>
-  </main>;
+
+      {error && <div className="alert">{error}</div>}
+
+      <section className="workspace">
+        <form className="card form-card" onSubmit={startSolve}>
+          <div className="section-heading"><div><p className="eyebrow">START SOLVE</p><h2>Challenge input</h2></div></div>
+          <label>Challenge description / prompt<textarea value={challenge} onChange={(event) => setChallenge(event.target.value)} placeholder="Paste the CTF challenge description, clues, ciphertext, credentials, source code, or anything you were given..." rows={9} /></label>
+          <label>Target URL <span className="muted">(optional)</span><input type="url" value={url} onChange={(event) => setUrl(event.target.value)} placeholder="https://target.ctf.local" /></label>
+          <label>Challenge file <span className="muted">(optional, max 10 MiB)</span><input type="file" onChange={(event) => setFile(event.target.files?.[0] ?? null)} /></label>
+          {file && <div className="muted">Selected: {file.name} ({Math.ceil(file.size / 1024)} KB)</div>}
+          <button type="submit" disabled={solving || (!challenge.trim() && !url.trim() && !file)}>{solving ? "Agent starting..." : "🚀 Start CTF Agent"}</button>
+        </form>
+
+        <section className="card cases-card">
+          <div className="section-heading"><div><p className="eyebrow">AGENT STATUS</p><h2>What happens next</h2></div></div>
+          {!result ? <div className="empty"><strong>Ready for a challenge.</strong><span>Nothing is executed until you press Start CTF Agent.</span></div> : <div className="case-list">
+            <div className="case"><div><strong>Challenge received</strong><span>{result.status}</span></div></div>
+            <div className="case"><div><strong>Specialists</strong><span>{result.specialists.join(" · ") || "Auto"}</span></div></div>
+            <div className="case"><div><strong>Capabilities</strong><span>{result.capabilities.join(" · ") || "Preparing"}</span></div></div>
+            <div className="case"><div><strong>Agent</strong><span>{result.message}</span></div></div>
+          </div>}
+        </section>
+      </section>
+
+      <section className="section-block">
+        <div className="section-heading"><div><p className="eyebrow">SOLVE LOOP</p><h2>From challenge to flag</h2></div></div>
+        <div className="grid">
+          {["Receive challenge", "Classify automatically", "Select specialist", "Use authorized tools", "Collect evidence", "Extract flag"].map((step, index) => <div className="card capability" key={step}><span className="capability-mark">{index + 1}</span><div><h3>{step}</h3><p className="muted">{index < 2 ? "No manual case setup required." : "Handled by the agent runtime."}</p></div></div>)}
+        </div>
+      </section>
+    </main>
+  );
 }
