@@ -6,7 +6,9 @@ from uuid import UUID
 
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.db.models import ExecutionJob
+
 
 LEASE_SECONDS = 300
 
