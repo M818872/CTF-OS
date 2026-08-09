@@ -6,6 +6,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+      ca-certificates curl file binutils unzip exiftool binwalk nmap && \
+    rm -rf /var/lib/apt/lists/*
+
 COPY backend/pyproject.toml ./backend/pyproject.toml
 COPY sdk ./sdk
 RUN pip install --no-cache-dir --upgrade pip && \
