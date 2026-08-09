@@ -1,7 +1,9 @@
 import pytest
 
+from app.services.execution import CapabilityExecutionService
 from app.specialists.agents import get_agent
 from app.tools.bus import ToolBus
+from app.tools.registry import get_tool, list_tools
 
 
 def test_tool_bus_routes_registered_capability() -> None:
@@ -35,3 +37,43 @@ def test_specialist_agent_uses_shared_bus() -> None:
     result = agent.execute(agent.plan("48656c6c6f", "crypto.decode"))
     assert result.specialist == "crypto"
     assert result.result.data["candidates"]["hex"] == "Hello"
+
+
+def test_specialist_capabilities_are_discoverable() -> None:
+    names = {tool.name for tool in list_tools()}
+    assert "crypto.analyze" in names
+    assert "web.analyze" in names
+    assert "forensics.analyze" in names
+    assert "reverse.analyze" in names
+    assert "network.analyze" in names
+    assert "stego.analyze" in names
+    assert "osint.analyze" in names
+    assert "mobile.analyze" in names
+    assert "blockchain.analyze" in names
+    assert "terminal.execute" in names
+
+
+@pytest.mark.asyncio
+async def test_terminal_capability_uses_runtime_runner(monkeypatch: pytest.MonkeyPatch) -> None:
+    service = CapabilityExecutionService()
+
+    async def fake_terminal(command: str):
+        return type(
+            "Result",
+            (),
+            {
+                "command": command,
+                "returncode": 0,
+                "stdout": "CTF{runtime_test}",
+                "stderr": "",
+                "timed_out": False,
+                "tokens": ["CTF{runtime_test}"],
+            },
+        )()
+
+    monkeypatch.setattr(service, "execute_terminal", fake_terminal)
+    result = await service.execute_async("terminal.execute", "printf test")
+
+    assert result.result.status == "success"
+    assert result.result.data["tokens"] == ["CTF{runtime_test}"]
+    assert get_tool("terminal.execute") is not None
