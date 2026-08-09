@@ -1,0 +1,16 @@
+from uuid import UUID
+
+from pydantic import BaseModel, Field, HttpUrl
+
+
+class SolveChallengeRequest(BaseModel):
+    challenge: str = Field(default="", max_length=20000)
+    url: HttpUrl | None = None
+
+
+class SolveChallengeResponse(BaseModel):
+    id: UUID
+    status: str
+    specialists: list[str]
+    capabilities: list[str]
+    message: str
