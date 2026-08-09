@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from app.runtime.command_runner import CommandRunner
 from app.runtime.kali_catalog import KaliTool, get_kali_tool
 from app.runtime.result_parser import extract_tokens
+from app.runtime.tool_provisioner import ToolProvisioner
 
 _IP = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
 _URL = re.compile(r"https?://[^\s\"'<>]+")
@@ -27,17 +28,34 @@ class KaliExecutionResult:
 
 
 class KaliToolExecutor:
-    """Run cataloged Kali tools through the CTF runtime command boundary."""
+    """Run cataloged Kali tools and provision missing tools in the CTF runtime."""
 
-    def __init__(self, runner: CommandRunner | None = None) -> None:
+    def __init__(
+        self,
+        runner: CommandRunner | None = None,
+        provisioner: ToolProvisioner | None = None,
+    ) -> None:
         self.runner = runner or CommandRunner()
+        self.provisioner = provisioner or ToolProvisioner(self.runner)
 
-    async def run(self, tool_name: str, args: list[str]) -> KaliExecutionResult:
+    async def run(
+        self,
+        tool_name: str,
+        args: list[str],
+        custom_install_command: str | None = None,
+    ) -> KaliExecutionResult:
         tool = get_kali_tool(tool_name)
         if tool is None:
             raise ValueError(f"unknown Kali tool: {tool_name}")
         if any(not isinstance(arg, str) for arg in args):
             raise TypeError("tool arguments must be strings")
+        if not self.provisioner.installed(tool):
+            ready = await self.provisioner.ensure(tool_name, custom_install_command)
+            if not ready:
+                raise RuntimeError(
+                    f"Kali tool {tool_name!r} is not installed; enable CTF_OS_AUTO_INSTALL=1 "
+                    "or provide a custom install command"
+                )
         command = shlex.join([tool.binary, *args])
         result = await self.runner.run(command)
         combined = f"{result.stdout}\n{result.stderr}"
