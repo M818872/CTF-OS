@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text, func
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -28,6 +28,9 @@ class Investigation(Base):
     )
     artifacts: Mapped[list[Artifact]] = relationship(
         back_populates="investigation", cascade="all, delete-orphan", order_by="Artifact.created_at"
+    )
+    jobs: Mapped[list[ExecutionJob]] = relationship(
+        back_populates="investigation", cascade="all, delete-orphan", order_by="ExecutionJob.created_at"
     )
 
 
@@ -70,3 +73,25 @@ class Artifact(Base):
     storage_key: Mapped[str] = mapped_column(String(500))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     investigation: Mapped[Investigation] = relationship(back_populates="artifacts")
+
+
+class ExecutionJob(Base):
+    __tablename__ = "execution_jobs"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    investigation_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("investigations.id", ondelete="CASCADE"), index=True, nullable=True
+    )
+    kind: Mapped[str] = mapped_column(String(50))
+    status: Mapped[str] = mapped_column(String(30), default="queued", index=True)
+    payload: Mapped[dict] = mapped_column(JSON, default=dict)
+    result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    max_attempts: Mapped[int] = mapped_column(Integer, default=3)
+    available_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+    locked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    investigation: Mapped[Investigation | None] = relationship(back_populates="jobs")
