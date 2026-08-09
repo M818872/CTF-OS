@@ -2,8 +2,10 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.models import Investigation
 from app.db.session import get_session
 from app.schemas.execution import (
     ExecuteCapabilityRequest,
@@ -66,9 +68,6 @@ async def execute_terminal(payload: TerminalExecuteRequest) -> TerminalExecuteRe
 @router.post("/terminal/jobs", response_model=ExecutionJobRead, status_code=202)
 async def enqueue_terminal_job(payload: ExecutionJobCreate, session: Session) -> ExecutionJobRead:
     if payload.investigation_id is not None:
-        from app.db.models import Investigation
-        from sqlalchemy import select
-
         exists = await session.scalar(select(Investigation.id).where(Investigation.id == payload.investigation_id))
         if exists is None:
             raise HTTPException(status_code=404, detail="Investigation not found")
