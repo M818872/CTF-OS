@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -47,7 +47,7 @@ class JobQueue:
 
     async def claim(self, session: AsyncSession) -> ExecutionJob | None:
         while True:
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             stale_before = now - timedelta(seconds=LEASE_SECONDS)
             query = (
                 select(ExecutionJob)
@@ -84,7 +84,7 @@ class JobQueue:
         job.result = result
         job.error = None
         job.locked_at = None
-        job.finished_at = datetime.now(timezone.utc)
+        job.finished_at = datetime.now(UTC)
         await session.commit()
 
     async def fail(self, session: AsyncSession, job: ExecutionJob, error: str) -> None:
@@ -92,8 +92,8 @@ class JobQueue:
         job.locked_at = None
         if job.attempts < job.max_attempts:
             job.status = "queued"
-            job.available_at = datetime.now(timezone.utc) + timedelta(seconds=min(2**job.attempts, 60))
+            job.available_at = datetime.now(UTC) + timedelta(seconds=min(2**job.attempts, 60))
         else:
             job.status = "failed"
-            job.finished_at = datetime.now(timezone.utc)
+            job.finished_at = datetime.now(UTC)
         await session.commit()
