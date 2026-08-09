@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from app.runtime.kali_executor import KaliExecutionResult, KaliToolExecutor
 from app.services.execution import CapabilityExecutionService, ExecutionResult
 from app.specialists.catalog import SPECIALISTS
 
@@ -13,11 +14,16 @@ class ToolRoute:
 
 
 class ToolBus(CapabilityExecutionService):
-    """Single dispatch boundary for catalog-approved specialist capabilities."""
+    """Single dispatch boundary for specialist capabilities and Kali runtime tools."""
 
-    def __init__(self, execution: CapabilityExecutionService | None = None) -> None:
+    def __init__(
+        self,
+        execution: CapabilityExecutionService | None = None,
+        kali: KaliToolExecutor | None = None,
+    ) -> None:
         super().__init__()
         self._execution = execution
+        self._kali = kali or KaliToolExecutor(self.runner)
         self._routes = {
             capability: ToolRoute(specialist=item.name, capability=capability)
             for item in SPECIALISTS
@@ -37,6 +43,10 @@ class ToolBus(CapabilityExecutionService):
         if self._execution is not None:
             return self._execution.execute(capability, input_text)
         return super().execute(capability, input_text)
+
+    async def execute_kali(self, tool_name: str, args: list[str]) -> KaliExecutionResult:
+        """Run a cataloged Kali tool through the configured CTF runtime."""
+        return await self._kali.run(tool_name, args)
 
     def capabilities_for(self, specialist: str) -> tuple[str, ...]:
         return tuple(route.capability for route in self._routes.values() if route.specialist == specialist)
