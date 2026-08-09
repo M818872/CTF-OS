@@ -10,9 +10,15 @@ class FakeRunner:
         return CommandResult(command, 0, "10.0.0.8 CTF{bus_runtime}", "", False)
 
 
+class InstalledProvisioner:
+    @staticmethod
+    def installed(_tool) -> bool:
+        return True
+
+
 @pytest.mark.asyncio
 async def test_tool_bus_executes_kali_tool_through_runtime() -> None:
-    bus = ToolBus(kali=KaliToolExecutor(FakeRunner()))
+    bus = ToolBus(kali=KaliToolExecutor(FakeRunner(), InstalledProvisioner()))
     result = await bus.execute_kali("nmap", ["10.0.0.8"])
     assert result.tool == "nmap"
     assert result.returncode == 0
@@ -22,6 +28,6 @@ async def test_tool_bus_executes_kali_tool_through_runtime() -> None:
 
 @pytest.mark.asyncio
 async def test_tool_bus_rejects_unknown_kali_tool() -> None:
-    bus = ToolBus(kali=KaliToolExecutor(FakeRunner()))
+    bus = ToolBus(kali=KaliToolExecutor(FakeRunner(), InstalledProvisioner()))
     with pytest.raises(ValueError, match="unknown Kali tool"):
         await bus.execute_kali("not-a-kali-tool", [])
