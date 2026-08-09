@@ -51,6 +51,19 @@ docker compose up --build
 5. CI must stay green; do not weaken checks to hide failures.
 6. Keep the architecture modular without premature microservices.
 
+## CTF runtime and Kali tools
+
+CTF-OS can detect whether a catalogued Kali tool is installed before the agent runs it. In a dedicated authorized CTF runtime, automatic provisioning can be enabled:
+
+```bash
+export CTF_OS_EXECUTION_MODE=direct
+export CTF_OS_AUTO_INSTALL=1
+```
+
+Known Debian/Kali package mappings are installed automatically when available. If a tool has no known package mapping, the Tool Bus accepts an explicit custom installer command. Custom installer commands are passed through the same argv-based runtime boundary; shell operators such as `&&` are not interpreted as shell syntax.
+
+After provisioning, the agent retries the requested tool and continues with the resulting output, token extraction, and finding extraction.
+
 ## Security boundary
 
-CTF-OS is intended for authorized CTF/lab environments. The execution layer uses explicit capability policies rather than unrestricted agent shell access.
+CTF-OS is intended for authorized CTF/lab environments. Direct execution and automatic provisioning are disabled by default and should only be enabled inside the dedicated CTF runtime. The API layer should not be exposed as an unrestricted remote shell.
