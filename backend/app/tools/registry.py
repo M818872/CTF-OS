@@ -48,5 +48,6 @@ def list_tools() -> list[ToolDefinition]:
     return list(TOOL_REGISTRY.values())
 
 
-# Import after registry primitives exist so decorators register specialist adapters.
+# Imports happen after registry primitives exist so decorators can register adapters.
+from app.tools import runtime_tools as _runtime_tools  # noqa: F401
 from app.tools import specialists as _specialists  # noqa: F401
