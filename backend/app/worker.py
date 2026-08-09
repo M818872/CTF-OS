@@ -4,7 +4,8 @@ import asyncio
 import logging
 import os
 
-from app.db.session import session_factory
+from app.db.models import Base
+from app.db.session import engine, session_factory
 from app.services.execution import CapabilityExecutionService
 from app.services.job_queue import JobQueue
 
@@ -16,6 +17,10 @@ class ExecutionWorker:
     def __init__(self) -> None:
         self.queue = JobQueue()
         self.executor = CapabilityExecutionService()
+
+    async def initialize(self) -> None:
+        async with engine.begin() as connection:
+            await connection.run_sync(Base.metadata.create_all)
 
     async def process_once(self) -> bool:
         async with session_factory() as session:
@@ -49,6 +54,7 @@ class ExecutionWorker:
         return True
 
     async def run_forever(self) -> None:
+        await self.initialize()
         LOGGER.info("CTF-OS execution worker started")
         while True:
             processed = await self.process_once()
@@ -57,7 +63,10 @@ class ExecutionWorker:
 
 
 async def main() -> None:
-    await ExecutionWorker().run_forever()
+    try:
+        await ExecutionWorker().run_forever()
+    finally:
+        await engine.dispose()
 
 
 if __name__ == "__main__":
