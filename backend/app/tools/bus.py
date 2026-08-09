@@ -17,7 +17,7 @@ class ToolBus(CapabilityExecutionService):
 
     def __init__(self, execution: CapabilityExecutionService | None = None) -> None:
         super().__init__()
-        self._execution = execution or self
+        self._execution = execution
         self._routes = {
             capability: ToolRoute(specialist=item.name, capability=capability)
             for item in SPECIALISTS
@@ -34,7 +34,9 @@ class ToolBus(CapabilityExecutionService):
         if not input_text.strip():
             raise ValueError("input_text is required")
         self.route(capability)
-        return self._execution.execute(capability, input_text)
+        if self._execution is not None:
+            return self._execution.execute(capability, input_text)
+        return super().execute(capability, input_text)
 
     def capabilities_for(self, specialist: str) -> tuple[str, ...]:
         return tuple(route.capability for route in self._routes.values() if route.specialist == specialist)
