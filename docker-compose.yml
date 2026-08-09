@@ -16,6 +16,23 @@ services:
       redis:
         condition: service_healthy
 
+  worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command: ["python", "-m", "app.worker"]
+    environment:
+      CTF_OS_ENVIRONMENT: development
+      CTF_OS_DEBUG: "false"
+      CTF_OS_LOG_LEVEL: INFO
+      CTF_OS_DATABASE_URL: postgresql+asyncpg://ctfos:ctfos_dev_only@postgres:5432/ctfos
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
   frontend:
     build:
       context: ./frontend
