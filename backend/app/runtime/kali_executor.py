@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 import re
 import shlex
-from dataclasses import dataclass
 
 from app.runtime.command_runner import CommandRunner
 from app.runtime.kali_catalog import KaliTool, get_kali_tool
