@@ -33,13 +33,17 @@ export default function Home() {
       const response = await fetch(`${API}/tools/jobs/${jobId}`, { cache: "no-store" });
       const data = (await response.json()) as JobResponse;
       if (!response.ok) throw new Error(data.error ?? "Unable to read agent status");
-      if (data.result?.flag) {
-        setFlag(data.result.flag);
+
+      const discoveredFlag = data.result?.flag ?? null;
+      if (discoveredFlag) {
+        setFlag(discoveredFlag);
         setStatus("FLAG FOUND");
+        setMessage(data.result?.summary ?? "The CTF agent found the flag.");
       } else {
         setStatus(data.status.toUpperCase());
+        setMessage(data.result?.summary ?? "The agent is working through the challenge...");
       }
-      setMessage(data.result?.summary ?? "The agent is working through the challenge...");
+
       if (data.status === "completed" || data.status === "failed") {
         if (data.status === "failed") throw new Error(data.error ?? "The agent could not solve the challenge");
         return;
@@ -65,7 +69,10 @@ export default function Home() {
       if (!response.ok) throw new Error(data.detail ?? "The CTF agent could not start");
       setStatus("SOLVING");
       setMessage(data.message);
-      if (data.flag) setFlag(data.flag);
+      if (data.flag) {
+        setFlag(data.flag);
+        setStatus("FLAG FOUND");
+      }
       await watchJob(data.job_id);
     } catch (cause) {
       setStatus("ERROR");
