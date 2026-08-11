@@ -2,13 +2,15 @@ FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app
+    PYTHONPATH=/app \
+    DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /app
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-      ca-certificates curl file binutils unzip exiftool binwalk nmap && \
+      ca-certificates curl file binutils unzip zip p7zip-full exiftool binwalk nmap \
+      tshark poppler-utils steghide stegseek fcrackzip john jq ripgrep xxd && \
     rm -rf /var/lib/apt/lists/*
 
 COPY backend/pyproject.toml ./backend/pyproject.toml
