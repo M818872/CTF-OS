@@ -29,7 +29,10 @@ services:
       CTF_OS_LOG_LEVEL: INFO
       CTF_OS_DATABASE_URL: postgresql+asyncpg://ctfos:ctfos_dev_only@postgres:5432/ctfos
       CTF_OS_EXECUTION_MODE: direct
-      CTF_OS_COMMAND_TIMEOUT: "120"
+      CTF_OS_AUTO_INSTALL: "1"
+      CTF_OS_COMMAND_TIMEOUT: "300"
+      CTF_OS_SOLVER_MAX_STEPS: "48"
+      CTF_OS_SOLVER_MAX_LINKS: "20"
     volumes:
       - ctf_artifacts:/app/backend/data/artifacts
     depends_on:
