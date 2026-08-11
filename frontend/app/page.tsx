@@ -33,9 +33,13 @@ export default function Home() {
       const response = await fetch(`${API}/tools/jobs/${jobId}`, { cache: "no-store" });
       const data = (await response.json()) as JobResponse;
       if (!response.ok) throw new Error(data.error ?? "Unable to read agent status");
-      setStatus(data.status.toUpperCase());
+      if (data.result?.flag) {
+        setFlag(data.result.flag);
+        setStatus("FLAG FOUND");
+      } else {
+        setStatus(data.status.toUpperCase());
+      }
       setMessage(data.result?.summary ?? "The agent is working through the challenge...");
-      if (data.result?.flag) setFlag(data.result.flag);
       if (data.status === "completed" || data.status === "failed") {
         if (data.status === "failed") throw new Error(data.error ?? "The agent could not solve the challenge");
         return;
