@@ -1,112 +1,149 @@
 "use client";
 
-import { useState } from "react";
-import type { FormEvent } from "react";
+import { useRef, useState } from "react";
+import type { ChangeEvent, DragEvent, FormEvent } from "react";
 
 type SolveResponse = {
-  id: string;
   job_id: string;
   status: string;
-  specialists: string[];
-  capabilities: string[];
   flag?: string | null;
   message: string;
 };
 
 type JobResponse = {
   status: string;
-  result?: { flag?: string | null; summary?: string; steps?: Array<{ name: string; tokens?: string[] }> } | null;
+  result?: { flag?: string | null; summary?: string } | null;
   error?: string | null;
 };
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
 
 export default function Home() {
-  const [challenge, setChallenge] = useState("");
-  const [url, setUrl] = useState("");
+  const fileInput = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
+  const [url, setUrl] = useState("");
   const [solving, setSolving] = useState(false);
-  const [result, setResult] = useState<SolveResponse | null>(null);
-  const [job, setJob] = useState<JobResponse | null>(null);
+  const [status, setStatus] = useState("READY");
+  const [flag, setFlag] = useState<string | null>(null);
+  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
   async function watchJob(jobId: string) {
     for (;;) {
       const response = await fetch(`${API}/tools/jobs/${jobId}`, { cache: "no-store" });
       const data = (await response.json()) as JobResponse;
-      if (!response.ok) throw new Error(data.error ?? "Unable to read solve status");
-      setJob(data);
-      if (data.status === "completed" || data.status === "failed") return;
+      if (!response.ok) throw new Error(data.error ?? "Unable to read agent status");
+      setStatus(data.status.toUpperCase());
+      setMessage(data.result?.summary ?? "The agent is working through the challenge...");
+      if (data.result?.flag) setFlag(data.result.flag);
+      if (data.status === "completed" || data.status === "failed") {
+        if (data.status === "failed") throw new Error(data.error ?? "The agent could not solve the challenge");
+        return;
+      }
       await new Promise((resolve) => setTimeout(resolve, 1000));
     }
   }
 
-  async function startSolve(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!challenge.trim() && !url.trim() && !file) return;
+  async function solve(selectedFile: File | null = file) {
+    if (!selectedFile && !url.trim()) return;
     setSolving(true);
+    setStatus("ANALYZING");
+    setFlag(null);
     setError("");
-    setResult(null);
-    setJob(null);
+    setMessage("Sending the challenge to the autonomous CTF agent...");
     try {
       const body = new FormData();
-      body.append("challenge", challenge.trim());
+      body.append("challenge", "");
       if (url.trim()) body.append("url", url.trim());
-      if (file) body.append("file", file);
+      if (selectedFile) body.append("file", selectedFile);
       const response = await fetch(`${API}/agent/solve`, { method: "POST", body });
       const data = (await response.json()) as SolveResponse & { detail?: string };
       if (!response.ok) throw new Error(data.detail ?? "The CTF agent could not start");
-      setResult(data);
+      setStatus("SOLVING");
+      setMessage(data.message);
+      if (data.flag) setFlag(data.flag);
       await watchJob(data.job_id);
     } catch (cause) {
+      setStatus("ERROR");
       setError(cause instanceof Error ? cause.message : "Unable to run the CTF agent");
     } finally {
       setSolving(false);
     }
   }
 
-  const flag = job?.result?.flag ?? result?.flag ?? null;
+  function chooseFile(event: ChangeEvent<HTMLInputElement>) {
+    const selected = event.target.files?.[0] ?? null;
+    setFile(selected);
+    if (selected) void solve(selected);
+  }
+
+  function dropFile(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    const dropped = event.dataTransfer.files?.[0] ?? null;
+    setFile(dropped);
+    if (dropped) void solve(dropped);
+  }
+
+  function submitUrl(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void solve(null);
+  }
 
   return (
-    <main>
-      <header className="topbar">
-        <div><div className="brand">CTF-OS</div><div className="muted">Autonomous CTF solving agent</div></div>
-        <span className="status">{solving ? "SOLVING" : flag ? "FLAG FOUND" : "READY"}</span>
+    <main className="solver-page">
+      <header className="solver-header">
+        <div className="brand">CTF-OS</div>
+        <span className={`status ${status === "FLAG FOUND" ? "found" : ""}`}>{status}</span>
       </header>
 
-      <section className="hero card">
-        <div>
-          <p className="eyebrow">CTF AGENT</p>
-          <h1>Give it a challenge. Let the agent solve it.</h1>
-          <p className="muted hero-copy">Upload a challenge file or give the agent a CTF URL. It queues the solve, runs the available inspection tools, checks every result for a flag, and keeps going through the runtime loop.</p>
-        </div>
-        <div className="pipeline"><span>INPUT</span><span>ANALYZE</span><span>TOOLS</span><span>INSPECT</span><span>FLAG</span></div>
+      <section className="solver-hero">
+        <p className="eyebrow">AUTONOMOUS CTF AGENT</p>
+        <h1>Upload the challenge.<br />Get the flag.</h1>
+        <p className="solver-subtitle">No cases. No investigation setup. Give the agent a challenge and let it work.</p>
       </section>
 
-      {error && <div className="alert">{error}</div>}
+      <section className="solver-card">
+        <div
+          className={`drop-zone ${solving ? "busy" : ""}`}
+          onClick={() => !solving && fileInput.current?.click()}
+          onDragOver={(event) => event.preventDefault()}
+          onDrop={dropFile}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") fileInput.current?.click(); }}
+        >
+          <input ref={fileInput} type="file" onChange={chooseFile} hidden />
+          <div className="drop-icon">↑</div>
+          <h2>{solving ? "Agent is solving..." : file ? file.name : "Drop your CTF challenge here"}</h2>
+          <p>{solving ? message : "or click to choose a file"}</p>
+        </div>
 
-      {flag && <section className="card flag-card"><p className="eyebrow">FLAG FOUND</p><div className="flag-value">{flag}</div><p className="muted">The agent found this token in the supplied challenge or collected tool output.</p></section>}
+        <div className="or-divider"><span>OR</span></div>
 
-      <section className="workspace">
-        <form className="card form-card" onSubmit={startSolve}>
-          <div className="section-heading"><div><p className="eyebrow">START SOLVE</p><h2>Challenge input</h2></div></div>
-          <label>Challenge description / prompt<textarea value={challenge} onChange={(event) => setChallenge(event.target.value)} placeholder="Paste the challenge text or clues (optional if you upload a file or provide a URL)..." rows={9} /></label>
-          <label>Target URL <span className="muted">(optional)</span><input type="url" value={url} onChange={(event) => setUrl(event.target.value)} placeholder="https://target.ctf.local" /></label>
-          <label>Challenge file <span className="muted">(optional, max 10 MiB)</span><input type="file" onChange={(event) => setFile(event.target.files?.[0] ?? null)} /></label>
-          {file && <div className="muted">Selected: {file.name} ({Math.ceil(file.size / 1024)} KB)</div>}
-          <button type="submit" disabled={solving || (!challenge.trim() && !url.trim() && !file)}>{solving ? "Agent is solving..." : "🚀 Start CTF Agent"}</button>
+        <form className="url-form" onSubmit={submitUrl}>
+          <input
+            type="url"
+            value={url}
+            onChange={(event) => setUrl(event.target.value)}
+            placeholder="Paste CTF challenge URL..."
+            disabled={solving}
+          />
+          <button type="submit" disabled={solving || !url.trim()}>Solve URL</button>
         </form>
 
-        <section className="card cases-card">
-          <div className="section-heading"><div><p className="eyebrow">LIVE SOLVE</p><h2>{job?.status ?? result?.status ?? "Ready"}</h2></div></div>
-          {!result ? <div className="empty"><strong>Ready for a challenge.</strong><span>Give the agent a file, URL, challenge text, or any combination.</span></div> : <div className="case-list">
-            <div className="case"><div><strong>Specialists</strong><span>{result.specialists.join(" · ") || "Auto"}</span></div></div>
-            <div className="case"><div><strong>Capabilities</strong><span>{result.capabilities.join(" · ") || "Preparing"}</span></div></div>
-            <div className="case"><div><strong>Runtime</strong><span>{job?.result?.summary ?? result.message}</span></div></div>
-            {job?.result?.steps?.map((step) => <div className="case" key={step.name}><div><strong>{step.name}</strong><span>{step.tokens?.join(" · ") || "completed"}</span></div></div>)}
-          </div>}
-        </section>
+        {solving && <div className="solve-status"><span className="pulse" /> {message || "Agent is solving the challenge..."}</div>}
+        {error && <div className="solve-error">{error}</div>}
       </section>
+
+      {flag && (
+        <section className="flag-result">
+          <p className="eyebrow">FLAG FOUND</p>
+          <div className="flag-value">{flag}</div>
+          <button type="button" onClick={() => navigator.clipboard?.writeText(flag)}>Copy flag</button>
+        </section>
+      )}
+
+      {!flag && !solving && !error && <p className="solver-footer">The agent will analyze the challenge, choose tools, inspect results, and search for the flag.</p>}
     </main>
   );
 }
