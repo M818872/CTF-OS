@@ -10,7 +10,7 @@ WORKDIR /app
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
       ca-certificates curl file binutils unzip zip p7zip-full exiftool binwalk nmap \
-      tshark poppler-utils steghide stegseek fcrackzip john jq ripgrep xxd && \
+      tshark poppler-utils steghide fcrackzip john jq ripgrep xxd && \
     rm -rf /var/lib/apt/lists/*
 
 COPY backend/pyproject.toml ./backend/pyproject.toml
