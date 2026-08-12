@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import pytest
 
 from app.services.ctf_solver import CtfSolver
