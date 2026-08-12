@@ -30,11 +30,12 @@ async def solve_challenge(
 
     parts = [item for item in (challenge, f"Target URL: {url}" if url else None) if item]
     title = "CTF challenge"
+    uploaded_name = file.filename if file is not None else None
     investigation = Investigation(
         title=title,
         challenge_type="unknown",
         status="received",
-        input_text="\n\n".join(parts) or f"Uploaded artifact: {file.filename}",
+        input_text="\n\n".join(parts) or f"Uploaded artifact: {uploaded_name}",
     )
     session.add(investigation)
     await session.flush()
