@@ -14,7 +14,7 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
       ca-certificates curl file binutils unzip zip p7zip-full exiftool binwalk nmap \
       tshark poppler-utils steghide fcrackzip john jq ripgrep xxd \
-      ruby ruby-dev git wget dnsutils whois tcpdump gobuster ffuf sqlmap nikto \
+      ruby ruby-dev git wget dnsutils whois tcpdump gobuster ffuf sqlmap \
       openssl gdb checksec && \
     rm -rf /var/lib/apt/lists/*
 
