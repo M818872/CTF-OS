@@ -32,7 +32,7 @@ services:
       CTF_OS_AUTO_INSTALL: "1"
       CTF_OS_COMMAND_TIMEOUT: "300"
       CTF_OS_SOLVER_MAX_STEPS: "48"
-      CTF_OS_SOLVER_MAX_LINKS: "20"
+      CTF_OS_SOLVER_MAX_LINKS: "24"
     volumes:
       - ctf_artifacts:/app/backend/data/artifacts
     depends_on:
